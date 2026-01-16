@@ -39,4 +39,8 @@ show-revision:
 show-generations:
 	nixos-rebuild list-generations
 
+test-qnas:
+	nix build .#packages.aarch64-linux.qnas-test --print-build-logs; \
+
+
 .PHONY: all $(MAKECMDGOALS)

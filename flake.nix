@@ -29,10 +29,22 @@
 
       # Packages
       packages =
-        nixpkgs.lib.genAttrs [ "x86_64-linux" "aarch64-linux" "aarch64-darwin" "x86_64-darwin" ]
-          (system: {
+        let
+          commonPackages = system: {
             dix = nixpkgs.legacyPackages.${system}.dix;
-          });
+          };
+          linuxPackages =
+            system:
+            commonPackages system
+            // {
+              qnas-test = import ./tests/qnas-integration-test.nix {
+                inputs = { inherit nixpkgs home-manager disko; };
+                inherit system;
+              };
+            };
+        in
+        nixpkgs.lib.genAttrs [ "x86_64-linux" "aarch64-linux" ] linuxPackages
+        // nixpkgs.lib.genAttrs [ "aarch64-darwin" "x86_64-darwin" ] commonPackages;
 
       # Apps
       apps =
