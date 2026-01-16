@@ -65,3 +65,6 @@ jobs:
             ${{ steps.dix.outputs.diff }}
             ```
           comment-tag: dix-diff
+      - name: Run integration tests
+        run: |
+          make test-qnas
