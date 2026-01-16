@@ -29,7 +29,10 @@
 
   environment.systemPackages = with pkgs; [
     # keep-sorted start
+    lvm2
+    mdadm
     openssl
+    uutils-coreutils
     # keep-sorted end
   ];
 
