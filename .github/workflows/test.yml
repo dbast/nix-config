@@ -39,3 +39,29 @@ jobs:
       - name: Build qnas system
         run: |
           nix build .#nixosConfigurations.qnas.config.system.build.toplevel -o result-current
+      - name: Build base system for comparison
+        if: github.event_name == 'pull_request'
+        run: |
+          mkdir -p /tmp/nix-config-main
+          git archive origin/main | tar -x -C /tmp/nix-config-main
+          nix build /tmp/nix-config-main#nixosConfigurations.qnas.config.system.build.toplevel -o result-main
+      - name: Generate closure diff with dix
+        id: dix
+        if: github.event_name == 'pull_request'
+        run: |
+          {
+            echo "diff<<EOF"
+            nix run .#dix result-main result-current 2>/dev/null || echo "Error: dix command failed"
+            echo "EOF"
+          } | tee -a $GITHUB_OUTPUT
+      - name: Post dix diff to PR
+        if: github.event_name == 'pull_request'
+        uses: thollander/actions-comment-pull-request@24bffb9b452ba05a4f3f77933840a6a841d1b32b # v3.0.1
+        with:
+          message: |
+            ## NixOS Closure Changes
+
+            ```
+            ${{ steps.dix.outputs.diff }}
+            ```
+          comment-tag: dix-diff
