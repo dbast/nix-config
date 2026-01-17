@@ -16,8 +16,24 @@
   # No EFI variables on this platform
   boot.loader.efi.canTouchEfiVariables = false;
 
-  # boot.kernelPackages = pkgs.linuxPackages_6_17;
-  boot.kernelPackages = pkgs.linuxPackages_latest;
+  boot.kernelPackages = pkgs.linuxPackagesFor (
+    pkgs.linuxKernel.buildLinux {
+      version = "6.18.0";
+      modDirVersion = "6.18.0";
+      src = pkgs.fetchFromGitHub {
+        owner = "mmind";
+        repo = "linux-rockchip";
+        rev = "dfa5e8dfc4c93dc85cbb30834d122647b9c90f72";
+        sha256 = "sha256-u5RE48PInuhluoSv9ovTUdEvU8KLN1eS2NA1dipN5YU=";
+      };
+      inherit (pkgs.linuxPackages_latest.kernel) commonStructuredConfig;
+      structuredExtraConfig = with pkgs.lib.kernel; {
+        LEDS_TRIGGER_BLKDEV = no;
+        SCSI_MVSAS = no;
+      };
+      ignoreConfigErrors = true;
+    }
+  );
 
   # Serial console for headless debugging on TS-433
   boot.kernelParams = [
