@@ -16,8 +16,30 @@
   # No EFI variables on this platform
   boot.loader.efi.canTouchEfiVariables = false;
 
-  # boot.kernelPackages = pkgs.linuxPackages_6_17;
-  boot.kernelPackages = pkgs.linuxPackages_latest;
+  boot.kernelPackages = pkgs.linuxPackagesFor (
+    pkgs.linuxKernel.buildLinux {
+      version = "6.18.0";
+      modDirVersion = "6.18.0";
+      src = pkgs.fetchFromGitHub {
+        owner = "mmind";
+        repo = "linux-rockchip";
+        rev = "ce97d7ed4c34695edc59f6a62309fef21a0a78c5";
+        sha256 = "sha256-u5RE48PInuhluoSv9ovTUdEvU8KLN1eS2NA1dipN5YU=";
+      };
+      postPatch = ''
+        # Drop any TS-233 overlay targets; we still build the TS-433 DTB.
+        sed -i '/rk3568-qnap-ts233.*\.dtbo/d' arch/arm64/boot/dts/rockchip/Makefile
+      '';
+      inherit (pkgs.linuxPackages_latest.kernel) commonStructuredConfig;
+      structuredExtraConfig = with pkgs.lib.kernel; {
+        OPENVSWITCH = no;
+        LEDS_TRIGGER_BLKDEV = no;
+        #LEDS_CLASS = no;
+        SCSI_MVSAS = no;
+      };
+      ignoreConfigErrors = true;
+    }
+  );
 
   # Serial console for headless debugging on TS-433
   boot.kernelParams = [
