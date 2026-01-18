@@ -26,7 +26,10 @@
         rev = "ce97d7ed4c34695edc59f6a62309fef21a0a78c5";
         sha256 = "sha256-u5RE48PInuhluoSv9ovTUdEvU8KLN1eS2NA1dipN5YU=";
       };
-      kernelPatches = [ ];
+      postPatch = ''
+        # Drop any TS-233 overlay targets; we still build the TS-433 DTB.
+        sed -i '/rk3568-qnap-ts233.*\.dtbo/d' arch/arm64/boot/dts/rockchip/Makefile
+      '';
       inherit (pkgs.linuxPackages_latest.kernel) commonStructuredConfig;
       structuredExtraConfig = with pkgs.lib.kernel; {
         OPENVSWITCH = no;
