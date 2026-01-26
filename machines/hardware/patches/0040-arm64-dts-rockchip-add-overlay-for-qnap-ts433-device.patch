@@ -1,0 +1,209 @@
+From 9b7887b02edf39ace5b059f5a1f8fc3ee035175e Mon Sep 17 00:00:00 2001
+From: Heiko Stuebner <heiko@sntech.de>
+Date: Sat, 21 Dec 2024 14:43:35 +0100
+Subject: [PATCH 40/57] arm64: dts: rockchip: add overlay for qnap-ts433 device
+ revision
+
+TS433 devices received a board revision adding gpios for per hard-disk
+presence-detection and power-control. These board have a PCB-id of at
+least 12 (mainboard) and 10 (backplane), which can be read from an EEPROM.
+
+The presence detection is not really necessary and there are also no
+existing bindings for doing something with it. So add them as gpio hogs
+to at least document them and allow their state to be read from debugfs.
+
+The power-control is modelled as regulators, with the hdd1+hdd2 variants
+connected to the RK3568's SATA controllers as target-supplies. The
+JMicron AHCI controller on PCIe didn't have bindings for that, I could
+find, so they get an always-on state for now.
+
+Signed-off-by: Heiko Stuebner <heiko@sntech.de>
+---
+ arch/arm64/boot/dts/rockchip/Makefile         |   5 +
+ .../rockchip/rk3568-qnap-ts433-pcb-12-10.dtso | 151 ++++++++++++++++++
+ 2 files changed, 156 insertions(+)
+ create mode 100644 arch/arm64/boot/dts/rockchip/rk3568-qnap-ts433-pcb-12-10.dtso
+
+diff --git a/arch/arm64/boot/dts/rockchip/Makefile b/arch/arm64/boot/dts/rockchip/Makefile
+index d0f22d3a3bb4..aafffecfb2ef 100644
+--- a/arch/arm64/boot/dts/rockchip/Makefile
++++ b/arch/arm64/boot/dts/rockchip/Makefile
+@@ -145,6 +145,7 @@ dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3568-odroid-m1.dtb
+ dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3568-photonicat.dtb
+ dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3568-qnap-ts233.dtb
+ dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3568-qnap-ts433.dtb
++dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3568-qnap-ts433-pcb-12-10.dtbo
+ dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3568-radxa-e25.dtb
+ dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3568-roc-pc.dtb
+ dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3568-rock-3a.dtb
+@@ -245,6 +246,10 @@ dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3399-rockpro64-v2-screen.dtb
+ rk3399-rockpro64-v2-screen-dtbs := rk3399-rockpro64-v2.dtb \
+ 	rk3399-rockpro64-screen.dtbo
+ 
++dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3568-qnap-ts433-pcb-12-10.dtb
++rk3568-qnap-ts433-pcb-12-10-dtbs := rk3568-qnap-ts433.dtb \
++	rk3568-qnap-ts433-pcb-12-10.dtbo
++
+ dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3568-wolfvision-pf5-vz-2-uhd.dtb
+ rk3568-wolfvision-pf5-vz-2-uhd-dtbs := rk3568-wolfvision-pf5.dtb \
+ 	rk3568-wolfvision-pf5-display-vz.dtbo \
+diff --git a/arch/arm64/boot/dts/rockchip/rk3568-qnap-ts433-pcb-12-10.dtso b/arch/arm64/boot/dts/rockchip/rk3568-qnap-ts433-pcb-12-10.dtso
+new file mode 100644
+index 000000000000..ce0fdc9f2989
+--- /dev/null
++++ b/arch/arm64/boot/dts/rockchip/rk3568-qnap-ts433-pcb-12-10.dtso
+@@ -0,0 +1,151 @@
++// SPDX-License-Identifier: (GPL-2.0-or-later OR MIT)
++/*
++ * Device tree overlay for TS433 board PCBs-12-10 revision.
++ *
++ * Copyright (C) 2025 Heiko Stuebner <heiko@sntech.de>
++ */
++
++/dts-v1/;
++/plugin/;
++
++#include <dt-bindings/gpio/gpio.h>
++#include <dt-bindings/pinctrl/rockchip.h>
++
++&{/} {
++	/*
++	 * The default hardware-state of this gpio causes the drive
++	 * to be already running when entering the kernel.
++	 * regulator-boot-on is needed to prevent one additional
++	 * power-cycle on the drive.
++	 *
++	 * With regulator-boot-on we get the expected 1 cycle
++	 * per boot, without it we end up with 2 cycles as seen
++	 * via smartctl.
++	 */
++	hdd1_pwr: regulator-hdd1-power {
++		compatible = "regulator-fixed";
++		gpio = <&gpio0 RK_PC2 GPIO_ACTIVE_LOW>;
++		pinctrl-names = "default";
++		pinctrl-0 = <&hdd1_power_pin>;
++		regulator-name = "hdd1-power";
++		regulator-boot-on;
++		vin-supply = <&dc_12v>;
++	};
++
++	hdd2_pwr: regulator-hdd2-power {
++		compatible = "regulator-fixed";
++		gpio = <&gpio0 RK_PC3 GPIO_ACTIVE_LOW>;
++		pinctrl-names = "default";
++		pinctrl-0 = <&hdd2_power_pin>;
++		regulator-name = "hdd2-power";
++		regulator-boot-on;
++		vin-supply = <&dc_12v>;
++	};
++
++	/*
++	 * HDD3+4 are connected to ports of the PCIe SATA controller.
++	 * Currently there is no way to attach those, so keep them
++	 * always on.
++	 */
++	hdd3_pwr: regulator-hdd3-power {
++		compatible = "regulator-fixed";
++		gpio = <&gpio0 RK_PC4 GPIO_ACTIVE_LOW>;
++		pinctrl-names = "default";
++		pinctrl-0 = <&hdd3_power_pin>;
++		regulator-name = "hdd3-power";
++		regulator-always-on;
++		regulator-boot-on;
++		vin-supply = <&dc_12v>;
++	};
++
++	hdd4_pwr: regulator-hdd4-power {
++		compatible = "regulator-fixed";
++		gpio = <&gpio0 RK_PC5 GPIO_ACTIVE_LOW>;
++		pinctrl-names = "default";
++		pinctrl-0 = <&hdd4_power_pin>;
++		regulator-name = "hdd4-power";
++		regulator-always-on;
++		regulator-boot-on;
++		vin-supply = <&dc_12v>;
++	};
++};
++
++&gpio2 {
++	hdd1-present-hog {
++		gpios = <RK_PA2 GPIO_ACTIVE_LOW>;
++		gpio-hog;
++		input;
++		line-name = "hdd1-present";
++	};
++
++	hdd2-present-hog {
++		gpios = <RK_PA1 GPIO_ACTIVE_LOW>;
++		gpio-hog;
++		input;
++		line-name = "hdd2-present";
++	};
++
++	hdd3-present-hog {
++		gpios = <RK_PD0 GPIO_ACTIVE_LOW>;
++		gpio-hog;
++		input;
++		line-name = "hdd3-present";
++	};
++
++	hdd4-present-hog {
++		gpios = <RK_PD1 GPIO_ACTIVE_LOW>;
++		gpio-hog;
++		input;
++		line-name = "hdd4-present";
++	};
++};
++
++&pinctrl {
++	pinctrl-names = "default";
++	pinctrl-0 = <&hdd1_present_pin &hdd2_present_pin &hdd3_present_pin
++		     &hdd4_present_pin>;
++
++	hdd-power {
++		hdd1_power_pin: hdd1-power-pin {
++			rockchip,pins = <0 RK_PC2 RK_FUNC_GPIO &pcfg_pull_none>;
++		};
++
++		hdd2_power_pin: hdd2-power-pin {
++			rockchip,pins = <0 RK_PC3 RK_FUNC_GPIO &pcfg_pull_none>;
++		};
++
++		hdd3_power_pin: hdd3-power-pin {
++			rockchip,pins = <0 RK_PC4 RK_FUNC_GPIO &pcfg_pull_none>;
++		};
++
++		hdd4_power_pin: hdd4-power-pin {
++			rockchip,pins = <0 RK_PC5 RK_FUNC_GPIO &pcfg_pull_none>;
++		};
++	};
++
++	hdd-present {
++		hdd1_present_pin: hdd1-present-pin {
++			rockchip,pins = <2 RK_PA2 RK_FUNC_GPIO &pcfg_pull_up>;
++		};
++
++		hdd2_present_pin: hdd2-present-pin {
++			rockchip,pins = <2 RK_PA1 RK_FUNC_GPIO &pcfg_pull_up>;
++		};
++
++		hdd3_present_pin: hdd3-present-pin {
++			rockchip,pins = <2 RK_PD0 RK_FUNC_GPIO &pcfg_pull_up>;
++		};
++
++		hdd4_present_pin: hdd4-present-pin {
++			rockchip,pins = <2 RK_PD1 RK_FUNC_GPIO &pcfg_pull_up>;
++		};
++	};
++};
++
++&sata1_port0 {
++	target-supply = <&hdd2_pwr>;
++};
++
++&sata2_port0 {
++	target-supply = <&hdd1_pwr>;
++};
+-- 
+2.52.0
+

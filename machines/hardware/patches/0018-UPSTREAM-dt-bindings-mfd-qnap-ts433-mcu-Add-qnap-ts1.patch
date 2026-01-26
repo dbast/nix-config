@@ -1,0 +1,37 @@
+From b70f0af1ea3edadc8f52082f4b3b00c7d188ddab Mon Sep 17 00:00:00 2001
+From: Heiko Stuebner <heiko@sntech.de>
+Date: Sun, 4 Jan 2026 18:33:09 +0100
+Subject: [PATCH 18/57] UPSTREAM: dt-bindings: mfd: qnap,ts433-mcu: Add
+ qnap,ts133-mcu compatible
+
+The same MCU is used on a number of devices, each with a slightly
+different set of features, like the number of LEDs.
+
+Add a compatible for the MCU used in the TS133 variant.
+This is the 1-disk consumer variant of the RK356x-based family.
+
+Signed-off-by: Heiko Stuebner <heiko@sntech.de>
+Acked-by: Rob Herring (Arm) <robh@kernel.org>
+Link: https://patch.msgid.link/20260104173310.2685852-2-heiko@sntech.de
+Signed-off-by: Lee Jones <lee@kernel.org>
+(cherry picked from commit 7093a9f58cd759fcb9bf77a6a4c93a06c00f9c3c)
+Signed-off-by: Heiko Stuebner <heiko@sntech.de>
+---
+ Documentation/devicetree/bindings/mfd/qnap,ts433-mcu.yaml | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/Documentation/devicetree/bindings/mfd/qnap,ts433-mcu.yaml b/Documentation/devicetree/bindings/mfd/qnap,ts433-mcu.yaml
+index 5454d9403cad..12e738b1270a 100644
+--- a/Documentation/devicetree/bindings/mfd/qnap,ts433-mcu.yaml
++++ b/Documentation/devicetree/bindings/mfd/qnap,ts433-mcu.yaml
+@@ -16,6 +16,7 @@ description:
+ properties:
+   compatible:
+     enum:
++      - qnap,ts133-mcu
+       - qnap,ts233-mcu
+       - qnap,ts433-mcu
+ 
+-- 
+2.52.0
+

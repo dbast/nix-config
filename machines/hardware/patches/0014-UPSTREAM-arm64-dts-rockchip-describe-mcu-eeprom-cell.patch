@@ -1,0 +1,99 @@
+From bad7f68c1b64f67c577526e8b598358a35521d71 Mon Sep 17 00:00:00 2001
+From: Heiko Stuebner <heiko@sntech.de>
+Date: Wed, 12 Nov 2025 22:42:03 +0100
+Subject: [PATCH 14/57] UPSTREAM: arm64: dts: rockchip: describe mcu eeprom
+ cells on rk3568-ts433
+
+The MCU's eeprom contains the unit's serial and a number of slots for
+mac-addresses. As the MCU seems to be used in different devices, up to
+8 mac addresses can live there and the unused slots are actually
+initialized with empty mac-address strings like 00:00:00:00:05:09 .
+
+Interestingly on the TS-433, the PCIe ethernet adapter brings its own
+memory to hold its mac, and the gmac0 is supposed to get its mac from
+the second mac-slot, while the first one stays empty.
+
+Signed-off-by: Heiko Stuebner <heiko@sntech.de>
+Link: https://patch.msgid.link/20251112214206.423244-3-heiko@sntech.de
+(cherry picked from commit 81f116991433d2547d7f350873cb4511ebcd4fec)
+Signed-off-by: Heiko Stuebner <heiko@sntech.de>
+---
+ .../boot/dts/rockchip/rk3568-qnap-ts433.dts   | 62 +++++++++++++++++++
+ 1 file changed, 62 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/rockchip/rk3568-qnap-ts433.dts b/arch/arm64/boot/dts/rockchip/rk3568-qnap-ts433.dts
+index 5656554ca284..224db87973b2 100644
+--- a/arch/arm64/boot/dts/rockchip/rk3568-qnap-ts433.dts
++++ b/arch/arm64/boot/dts/rockchip/rk3568-qnap-ts433.dts
+@@ -655,6 +655,68 @@ fan: fan-0 {
+ 			#cooling-cells = <2>;
+ 			cooling-levels = <0 64 89 128 166 204 221 238>;
+ 		};
++
++		nvmem-layout {
++			compatible = "fixed-layout";
++			#address-cells = <1>;
++			#size-cells = <1>;
++
++			serial-number@0 {
++				reg = <0x0 0x13>;
++			};
++
++			ext-port@22 {
++				reg = <0x22 0x2>;
++			};
++
++			mac0: mac@24 {
++				compatible = "mac-base";
++				reg = <0x24 0x11>;
++				#nvmem-cell-cells = <1>;
++			};
++
++			mac1: mac@35 {
++				compatible = "mac-base";
++				reg = <0x35 0x11>;
++				#nvmem-cell-cells = <1>;
++			};
++
++			mac2: mac@46 {
++				compatible = "mac-base";
++				reg = <0x46 0x11>;
++				#nvmem-cell-cells = <1>;
++			};
++
++			mac3: mac@57 {
++				compatible = "mac-base";
++				reg = <0x57 0x11>;
++				#nvmem-cell-cells = <1>;
++			};
++
++			mac4: mac@68 {
++				compatible = "mac-base";
++				reg = <0x68 0x11>;
++				#nvmem-cell-cells = <1>;
++			};
++
++			mac5: mac@79 {
++				compatible = "mac-base";
++				reg = <0x79 0x11>;
++				#nvmem-cell-cells = <1>;
++			};
++
++			mac6: mac@8a {
++				compatible = "mac-base";
++				reg = <0x8a 0x11>;
++				#nvmem-cell-cells = <1>;
++			};
++
++			mac7: mac@9b {
++				compatible = "mac-base";
++				reg = <0x9b 0x11>;
++				#nvmem-cell-cells = <1>;
++			};
++		};
+ 	};
+ };
+ 
+-- 
+2.52.0
+

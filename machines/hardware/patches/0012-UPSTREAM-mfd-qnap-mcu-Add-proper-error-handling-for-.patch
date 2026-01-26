@@ -1,0 +1,128 @@
+From 0bd65e4436f76996f14e27acde47615da8abe06a Mon Sep 17 00:00:00 2001
+From: Heiko Stuebner <heiko@sntech.de>
+Date: Thu, 13 Nov 2025 17:52:18 +0100
+Subject: [PATCH 12/57] UPSTREAM: mfd: qnap-mcu: Add proper error handling for
+ command errors
+
+Further investigation revealed that the MCU in QNAP devices may return
+two error states. One "@8" for a checksum error in the submitted command
+and one "@9" for any generic (and sadly unspecified) error.
+
+These error codes with 2 data character can of course also be shorter
+then the expected reply length for the submitted command, so we'll
+need to check the received data for error codes and exit the receive
+portion early in that case.
+
+Signed-off-by: Heiko Stuebner <heiko@sntech.de>
+Link: https://patch.msgid.link/20251113165218.449616-5-heiko@sntech.de
+Signed-off-by: Lee Jones <lee@kernel.org>
+(cherry picked from commit 56c1245d51faab70bf68cc3a5cd3925768e6375b)
+Signed-off-by: Heiko Stuebner <heiko@sntech.de>
+---
+ drivers/mfd/qnap-mcu.c | 66 +++++++++++++++++++++++++++++++++++++++++-
+ 1 file changed, 65 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/mfd/qnap-mcu.c b/drivers/mfd/qnap-mcu.c
+index cd836bdd44a8..f81c69f22254 100644
+--- a/drivers/mfd/qnap-mcu.c
++++ b/drivers/mfd/qnap-mcu.c
+@@ -19,6 +19,7 @@
+ /* The longest command found so far is 5 bytes long */
+ #define QNAP_MCU_MAX_CMD_SIZE		5
+ #define QNAP_MCU_MAX_DATA_SIZE		36
++#define QNAP_MCU_ERROR_SIZE		2
+ #define QNAP_MCU_CHECKSUM_SIZE		1
+ 
+ #define QNAP_MCU_RX_BUFFER_SIZE		\
+@@ -103,6 +104,48 @@ static int qnap_mcu_write(struct qnap_mcu *mcu, const u8 *data, u8 data_size)
+ 	return serdev_device_write(mcu->serdev, tx, length, HZ);
+ }
+ 
++static bool qnap_mcu_is_error_msg(size_t size)
++{
++	return (size == QNAP_MCU_ERROR_SIZE + QNAP_MCU_CHECKSUM_SIZE);
++}
++
++static bool qnap_mcu_reply_is_generic_error(unsigned char *buf, size_t size)
++{
++	if (!qnap_mcu_is_error_msg(size))
++		return false;
++
++	if (buf[0] == '@' && buf[1] == '9')
++		return true;
++
++	return false;
++}
++
++static bool qnap_mcu_reply_is_checksum_error(unsigned char *buf, size_t size)
++{
++	if (!qnap_mcu_is_error_msg(size))
++		return false;
++
++	if (buf[0] == '@' && buf[1] == '8')
++		return true;
++
++	return false;
++}
++
++static bool qnap_mcu_reply_is_any_error(struct qnap_mcu *mcu, unsigned char *buf, size_t size)
++{
++	if (qnap_mcu_reply_is_generic_error(buf, size)) {
++		dev_err(&mcu->serdev->dev, "Controller sent generic error response\n");
++		return true;
++	}
++
++	if (qnap_mcu_reply_is_checksum_error(buf, size)) {
++		dev_err(&mcu->serdev->dev, "Controller received invalid checksum for the command\n");
++		return true;
++	}
++
++	return false;
++}
++
+ static size_t qnap_mcu_receive_buf(struct serdev_device *serdev, const u8 *buf, size_t size)
+ {
+ 	struct device *dev = &serdev->dev;
+@@ -136,6 +179,24 @@ static size_t qnap_mcu_receive_buf(struct serdev_device *serdev, const u8 *buf,
+ 		}
+ 	}
+ 
++	/*
++	 * We received everything the uart had to offer for now.
++	 * This could mean that either the uart will send more in a 2nd
++	 * receive run, or that the MCU cut the reply short because it
++	 * sent an error code instead of the expected reply.
++	 *
++	 * So check if the received data has the correct size for an error
++	 * reply and if it matches, is an actual error code.
++	 */
++	if (qnap_mcu_is_error_msg(reply->received) &&
++	    qnap_mcu_verify_checksum(reply->data, reply->received) &&
++	    qnap_mcu_reply_is_any_error(mcu, reply->data, reply->received)) {
++		/* The reply was an error code, we're done */
++		reply->length = 0;
++
++		complete(&reply->done);
++	}
++
+ 	/*
+ 	 * The only way to get out of the above loop and end up here
+ 	 * is through consuming all of the supplied data, so here we
+@@ -182,10 +243,13 @@ int qnap_mcu_exec(struct qnap_mcu *mcu,
+ 	}
+ 
+ 	if (!qnap_mcu_verify_checksum(rx, reply->received)) {
+-		dev_err(&mcu->serdev->dev, "Invalid Checksum received\n");
++		dev_err(&mcu->serdev->dev, "Invalid Checksum received from controller\n");
+ 		return -EPROTO;
+ 	}
+ 
++	if (qnap_mcu_reply_is_any_error(mcu, rx, reply->received))
++		return -EPROTO;
++
+ 	memcpy(reply_data, rx, reply_data_size);
+ 
+ 	return 0;
+-- 
+2.52.0
+
