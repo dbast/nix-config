@@ -122,6 +122,10 @@
       name = "0040";
       patch = ./patches/0040-arm64-dts-rockchip-add-overlay-for-qnap-ts433-device.patch;
     }
+    {
+      name = "0041";
+      patch = ./patches/0058-HACK-disable-usb-phy-regulators-temporarily.patch;
+    }
   ];
 
   # Serial console for headless debugging on TS-433
