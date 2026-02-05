@@ -29,6 +29,7 @@
   boot.initrd.availableKernelModules = [
     # SATA / storage
     "ahci"
+    "ahci_dwc"
     "ahci_platform"
     "sdhci"
     "sdhci_of_arasan"
@@ -44,18 +45,26 @@
     "dwmac_rk"
     "realtek"
     "libphy"
+    "phy_rockchip_naneng_combphy"
 
     # Filesystems
+    "btrfs"
     "xfs"
+  ];
+  boot.initrd.kernelModules = [
+    "ahci_dwc"
+    "phy_rockchip_naneng_combphy"
   ];
   boot.kernelModules = [
     "rk3568_thermal"
     "r8169"
+    "btrfs"
     "xfs"
   ];
   boot.initrd.supportedFilesystems = [ "xfs" ];
   boot.supportedFilesystems = [
     "ext4"
+    "btrfs"
     "vfat"
     "xfs"
   ];
