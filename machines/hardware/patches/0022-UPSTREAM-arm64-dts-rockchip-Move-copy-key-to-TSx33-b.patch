@@ -1,0 +1,90 @@
+From dfa5e8dfc4c93dc85cbb30834d122647b9c90f72 Mon Sep 17 00:00:00 2001
+From: Heiko Stuebner <heiko@sntech.de>
+Date: Sun, 4 Jan 2026 20:14:46 +0100
+Subject: [PATCH 22/57] UPSTREAM: arm64: dts: rockchip: Move copy-key to TSx33
+ board files
+
+The copy-key is not present on all device variants, so move it to
+the individual boards that have this key.
+
+Signed-off-by: Heiko Stuebner <heiko@sntech.de>
+Link: https://patch.msgid.link/20260104191448.2693309-4-heiko@sntech.de
+(cherry picked from commit a81a2d211344675de4d945eb2070e3ef1202060f)
+Signed-off-by: Heiko Stuebner <heiko@sntech.de>
+---
+ arch/arm64/boot/dts/rockchip/rk3568-qnap-ts233.dts  | 11 +++++++++++
+ arch/arm64/boot/dts/rockchip/rk3568-qnap-ts433.dts  | 11 +++++++++++
+ arch/arm64/boot/dts/rockchip/rk3568-qnap-tsx33.dtsi | 10 ++--------
+ 3 files changed, 24 insertions(+), 8 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/rockchip/rk3568-qnap-ts233.dts b/arch/arm64/boot/dts/rockchip/rk3568-qnap-ts233.dts
+index e76502180788..52b741376ef5 100644
+--- a/arch/arm64/boot/dts/rockchip/rk3568-qnap-ts233.dts
++++ b/arch/arm64/boot/dts/rockchip/rk3568-qnap-ts233.dts
+@@ -51,6 +51,17 @@ eeprom@56 {
+ 	};
+ };
+ 
++&keys {
++		pinctrl-names = "default";
++		pinctrl-0 = <&copy_button_pin>, <&reset_button_pin>;
++
++		key-copy {
++			label = "copy";
++			gpios = <&gpio0 RK_PB6 GPIO_ACTIVE_LOW>;
++			linux,code = <KEY_COPY>;
++		};
++};
++
+ &leds {
+ 	led-1 {
+ 		color = <LED_COLOR_ID_GREEN>;
+diff --git a/arch/arm64/boot/dts/rockchip/rk3568-qnap-ts433.dts b/arch/arm64/boot/dts/rockchip/rk3568-qnap-ts433.dts
+index 708e7f1f8d0d..7d2aedfe616d 100644
+--- a/arch/arm64/boot/dts/rockchip/rk3568-qnap-ts433.dts
++++ b/arch/arm64/boot/dts/rockchip/rk3568-qnap-ts433.dts
+@@ -61,6 +61,17 @@ eeprom@56 {
+ 	};
+ };
+ 
++&keys {
++		pinctrl-names = "default";
++		pinctrl-0 = <&copy_button_pin>, <&reset_button_pin>;
++
++		key-copy {
++			label = "copy";
++			gpios = <&gpio0 RK_PB6 GPIO_ACTIVE_LOW>;
++			linux,code = <KEY_COPY>;
++		};
++};
++
+ &leds {
+ 	led-1 {
+ 		color = <LED_COLOR_ID_GREEN>;
+diff --git a/arch/arm64/boot/dts/rockchip/rk3568-qnap-tsx33.dtsi b/arch/arm64/boot/dts/rockchip/rk3568-qnap-tsx33.dtsi
+index 482d8584ec88..cca7b7d0685f 100644
+--- a/arch/arm64/boot/dts/rockchip/rk3568-qnap-tsx33.dtsi
++++ b/arch/arm64/boot/dts/rockchip/rk3568-qnap-tsx33.dtsi
+@@ -12,17 +12,11 @@ chosen {
+ 		stdout-path = "serial2:115200n8";
+ 	};
+ 
+-	keys {
++	keys: keys {
+ 		compatible = "gpio-keys";
+-		pinctrl-0 = <&copy_button_pin>, <&reset_button_pin>;
++		pinctrl-0 = <&reset_button_pin>;
+ 		pinctrl-names = "default";
+ 
+-		key-copy {
+-			label = "copy";
+-			gpios = <&gpio0 RK_PB6 GPIO_ACTIVE_LOW>;
+-			linux,code = <KEY_COPY>;
+-		};
+-
+ 		key-reset {
+ 			label = "reset";
+ 			gpios = <&gpio0 RK_PB5 GPIO_ACTIVE_LOW>;
+-- 
+2.52.0
+

@@ -1,0 +1,134 @@
+From ca1312db99ffa83ca2411e5aadbc6a3cd103bc6d Mon Sep 17 00:00:00 2001
+From: Heiko Stuebner <heiko@sntech.de>
+Date: Wed, 12 Nov 2025 22:42:02 +0100
+Subject: [PATCH 13/57] UPSTREAM: arm64: dts: rockchip: move cpu_thermal node
+ to the correct position
+
+The &cpu_thermal node was added at the wrong position, move it to
+the correctly sorted one.
+
+Signed-off-by: Heiko Stuebner <heiko@sntech.de>
+Link: https://patch.msgid.link/20251112214206.423244-2-heiko@sntech.de
+(cherry picked from commit 15efa2414602ad4c411ea8d4113b87656ebe0737)
+Signed-off-by: Heiko Stuebner <heiko@sntech.de>
+---
+ .../boot/dts/rockchip/rk3568-qnap-ts433.dts   | 96 +++++++++----------
+ 1 file changed, 48 insertions(+), 48 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/rockchip/rk3568-qnap-ts433.dts b/arch/arm64/boot/dts/rockchip/rk3568-qnap-ts433.dts
+index 6ae4316761c4..5656554ca284 100644
+--- a/arch/arm64/boot/dts/rockchip/rk3568-qnap-ts433.dts
++++ b/arch/arm64/boot/dts/rockchip/rk3568-qnap-ts433.dts
+@@ -196,6 +196,54 @@ &cpu3 {
+ 	cpu-supply = <&vdd_cpu>;
+ };
+ 
++/*
++ * The MCU can provide system temperature too, but only by polling and of
++ * course also cannot set trip points. So attach to the cpu thermal-zone
++ * instead to control the fan.
++ */
++&cpu_thermal {
++	trips {
++		case_fan0: case-fan0 {
++			hysteresis = <2000>;
++			temperature = <35000>;
++			type = "active";
++		};
++
++		case_fan1: case-fan1 {
++			hysteresis = <2000>;
++			temperature = <45000>;
++			type = "active";
++		};
++
++		case_fan2: case-fan2 {
++			hysteresis = <2000>;
++			temperature = <65000>;
++			type = "active";
++		};
++	};
++
++	cooling-maps {
++		/*
++		 * Always provide some air movement, due to small case
++		 * full of harddrives.
++		 */
++		map1 {
++			cooling-device = <&fan THERMAL_NO_LIMIT 1>;
++			trip = <&case_fan0>;
++		};
++
++		map2 {
++			cooling-device = <&fan 2 3>;
++			trip = <&case_fan1>;
++		};
++
++		map3 {
++			cooling-device = <&fan 4 THERMAL_NO_LIMIT>;
++			trip = <&case_fan2>;
++		};
++	};
++};
++
+ &gmac0 {
+ 	assigned-clocks = <&cru SCLK_GMAC0_RX_TX>, <&cru SCLK_GMAC0>;
+ 	assigned-clock-parents = <&cru SCLK_GMAC0_RGMII_SPEED>, <&cru CLK_MAC0_2TOP>;
+@@ -492,54 +540,6 @@ rgmii_phy0: ethernet-phy@3 {
+ 	};
+ };
+ 
+-/*
+- * The MCU can provide system temperature too, but only by polling and of
+- * course also cannot set trip points. So attach to the cpu thermal-zone
+- * instead to control the fan.
+- */
+-&cpu_thermal {
+-	trips {
+-		case_fan0: case-fan0 {
+-			hysteresis = <2000>;
+-			temperature = <35000>;
+-			type = "active";
+-		};
+-
+-		case_fan1: case-fan1 {
+-			hysteresis = <2000>;
+-			temperature = <45000>;
+-			type = "active";
+-		};
+-
+-		case_fan2: case-fan2 {
+-			hysteresis = <2000>;
+-			temperature = <65000>;
+-			type = "active";
+-		};
+-	};
+-
+-	cooling-maps {
+-		/*
+-		 * Always provide some air movement, due to small case
+-		 * full of harddrives.
+-		 */
+-		map1 {
+-			cooling-device = <&fan THERMAL_NO_LIMIT 1>;
+-			trip = <&case_fan0>;
+-		};
+-
+-		map2 {
+-			cooling-device = <&fan 2 3>;
+-			trip = <&case_fan1>;
+-		};
+-
+-		map3 {
+-			cooling-device = <&fan 4 THERMAL_NO_LIMIT>;
+-			trip = <&case_fan2>;
+-		};
+-	};
+-};
+-
+ &pcie30phy {
+ 	data-lanes = <1 2>;
+ 	status = "okay";
+-- 
+2.52.0
+

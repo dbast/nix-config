@@ -43,7 +43,10 @@ jobs:
           authToken: "${{ secrets.CACHIX_AUTH_TOKEN }}"
       - name: Build qnas system
         run: |
-          nix build .#nixosConfigurations.qnas.config.system.build.toplevel -o result-current
+          nix build -L --print-build-logs .#nixosConfigurations.qnas.config.system.build.toplevel -o result-current || {
+            nix log "$(nix eval .#nixosConfigurations.qnas.config.boot.kernelPackages.kernel.drvPath --raw)"
+            exit 1
+          }
       - name: Build base system for comparison
         if: github.event_name == 'pull_request'
         run: |
