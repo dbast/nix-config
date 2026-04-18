@@ -17,7 +17,7 @@
       mkRule = as: lib.concatStringsSep ", " as;
       mkRules = rs: lib.concatStringsSep "\n" rs;
     in
-    mkRules ([
+    mkRules [
       (mkRule [
         ''ACTION=="add|change"''
         ''SUBSYSTEM=="block"''
@@ -25,7 +25,7 @@
         ''ATTR{queue/rotational}=="1"''
         ''RUN+="${pkgs.hdparm}/bin/hdparm -S 244 /dev/%k"''
       ])
-    ]);
+    ];
 
   environment.systemPackages = with pkgs; [
     # keep-sorted start

@@ -31,13 +31,11 @@
 
   users.groups.data = { };
 
-  home-manager.users.daniel =
-    { ... }:
-    {
-      programs.zsh.enable = true;
-      programs.fzf.enable = true;
-      programs.eza.enable = true;
-    };
+  home-manager.users.daniel = _: {
+    programs.zsh.enable = true;
+    programs.fzf.enable = true;
+    programs.eza.enable = true;
+  };
 
   nixpkgs.config.allowUnfree = true;
   nix.settings.experimental-features = [

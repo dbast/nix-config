@@ -12,7 +12,5 @@
     taplo.enable = true;
     yamlfmt.enable = true;
   };
-  settings = {
-    formatter = { };
-  };
+  settings.formatter = { };
 }

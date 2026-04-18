@@ -10,7 +10,7 @@ check:
 	nix flake check --all-systems
 
 fmt:
-	nix fmt
+	nix fmt -- --clear-cache
 
 clean:
 	nh clean all
