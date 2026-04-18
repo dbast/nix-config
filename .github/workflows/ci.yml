@@ -58,7 +58,7 @@ jobs:
             echo "diff<<EOF"
             nix run .#dix result-main result-current 2>/dev/null || echo "Error: dix command failed"
             echo "EOF"
-          } | tee -a $GITHUB_OUTPUT
+          } | tee -a "$GITHUB_OUTPUT"
       - name: Post dix diff to PR
         if: github.event_name == 'pull_request'
         uses: thollander/actions-comment-pull-request@24bffb9b452ba05a4f3f77933840a6a841d1b32b # v3.0.1

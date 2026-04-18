@@ -2,6 +2,7 @@
   description = "NixOS configurations for various systems including QNAP TS-433";
 
   inputs = {
+    flake-parts.url = "github:hercules-ci/flake-parts";
     nixpkgs.url = "github:nixos/nixpkgs/nixos-25.11";
     treefmt-nix.url = "github:numtide/treefmt-nix";
     treefmt-nix.inputs.nixpkgs.follows = "nixpkgs";
@@ -12,54 +13,47 @@
   };
 
   outputs =
-    {
+    inputs@{
       self,
+      flake-parts,
       nixpkgs,
       treefmt-nix,
       home-manager,
       disko,
       ...
     }:
-    let
-      si = self.sourceInfo;
-    in
-    {
-      # Forward formatter output from treefmt-nix for all systems
-      formatter = treefmt-nix.formatter;
+    flake-parts.lib.mkFlake { inherit inputs; } {
+      imports = [ treefmt-nix.flakeModule ];
 
-      # Packages
-      packages =
-        let
-          commonPackages = system: {
-            dix = nixpkgs.legacyPackages.${system}.dix;
-          };
-          linuxPackages =
-            system:
-            commonPackages system
-            // {
-              qnas-test = import ./tests/qnas-integration-test.nix {
-                inputs = { inherit nixpkgs home-manager disko; };
-                inherit system;
-              };
-            };
-        in
-        nixpkgs.lib.genAttrs [ "x86_64-linux" "aarch64-linux" ] linuxPackages
-        // nixpkgs.lib.genAttrs [ "aarch64-darwin" "x86_64-darwin" ] commonPackages;
+      systems = [
+        "x86_64-linux"
+        "aarch64-linux"
+        "aarch64-darwin"
+        "x86_64-darwin"
+      ];
 
-      # Apps
-      apps =
-        nixpkgs.lib.genAttrs [ "x86_64-linux" "aarch64-linux" "aarch64-darwin" "x86_64-darwin" ]
-          (system: {
-            dix = {
-              type = "app";
-              program = "${nixpkgs.legacyPackages.${system}.dix}/bin/dix";
-              meta.mainProgram = "dix";
-              meta.description = "Interactive disk space usage CLI tool";
-            };
-          });
+      perSystem =
+        { pkgs, system, ... }:
+        {
+          treefmt = import ./treefmt.nix;
 
-      # NixOS configurations
-      nixosConfigurations.qnas = nixpkgs.lib.nixosSystem {
+          packages = {
+            inherit (pkgs) dix;
+          }
+          // (
+            if pkgs.stdenv.hostPlatform.isLinux then
+              {
+                qnas-test = import ./tests/qnas-integration-test.nix {
+                  inputs = { inherit nixpkgs home-manager disko; };
+                  inherit system;
+                };
+              }
+            else
+              { }
+          );
+        };
+
+      flake.nixosConfigurations.qnas = nixpkgs.lib.nixosSystem {
         system = "aarch64-linux";
         modules = [
           disko.nixosModules.disko
@@ -71,14 +65,9 @@
             home-manager.useUserPackages = true;
             home-manager.users.daniel = import ./users/daniel/home-manager.nix;
           }
-
-          (
-            { ... }:
-            {
-              system.configurationRevision = (si.rev or null);
-            }
-          )
-
+          {
+            system.configurationRevision = self.sourceInfo.rev or null;
+          }
         ];
         specialArgs = { inherit home-manager; };
       };
