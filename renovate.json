@@ -3,7 +3,18 @@
   "extends": [
     "config:recommended",
     "customManagers:githubActionsVersions",
-    "helpers:pinGitHubActionDigestsToSemver"
+    "helpers:pinGitHubActionDigests"
+  ],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "managerFilePatterns": [
+        "/(^|/)flake\\.nix$/"
+      ],
+      "matchStrings": [
+        "# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+) versioning=(?<versioning>\\S+) extractVersion=(?<extractVersion>\\S+)\\s+\\S+\\.url = \\\"github:[^\\\"]+/v(?<currentValue>[^\\\"]+)\\\";"
+      ]
+    }
   ],
   "lockFileMaintenance": {
     "enabled": true

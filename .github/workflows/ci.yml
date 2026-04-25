@@ -59,6 +59,19 @@ jobs:
             nix run .#dix result-main result-current 2>/dev/null || echo "Error: dix command failed"
             echo "EOF"
           } | tee -a "$GITHUB_OUTPUT"
+      - name: Collect flake input timestamps
+        id: flake-input-dates
+        if: github.event_name == 'pull_request'
+        run: |
+          {
+            echo "dates<<EOF"
+            echo '| Input | Epoch | ISO UTC |'
+            echo '| --- | ---: | --- |'
+            jq -r '.nodes | to_entries[] | select(.value.locked.lastModified != null) | "\(.key)\t\(.value.locked.lastModified)"' flake.lock | while IFS=$'\t' read -r key ts; do
+              printf '| %s | %s | %s |\n' "$key" "$ts" "$(date -u -d "@$ts" +"%Y-%m-%dT%H:%M:%SZ")"
+            done
+            echo "EOF"
+          } | tee -a "$GITHUB_OUTPUT"
       - name: Post dix diff to PR
         if: github.event_name == 'pull_request'
         uses: thollander/actions-comment-pull-request@24bffb9b452ba05a4f3f77933840a6a841d1b32b # v3.0.1
@@ -69,6 +82,10 @@ jobs:
             ```
             ${{ steps.dix.outputs.diff }}
             ```
+
+            ## Flake Input Timestamps
+
+            ${{ steps.flake-input-dates.outputs.dates }}
           comment-tag: dix-diff
       - name: Run integration tests
         run: |
