@@ -1,0 +1,102 @@
+From 5aef0c26b69435e53db0344a1cc2b01e42610cfd Mon Sep 17 00:00:00 2001
+From: Heiko Stuebner <heiko@sntech.de>
+Date: Sun, 4 Jan 2026 20:14:45 +0100
+Subject: [PATCH 21/57] UPSTREAM: arm64: dts: rockchip: Fix the common combophy
+ + SATA on QNAP TSx33 devices
+
+The common used SATA controller on all TSx33 devices is actually SATA2.
+So move the SATA controller + combophy enablement to their correct
+position between shared dtsi and board devicetrees.
+
+Signed-off-by: Heiko Stuebner <heiko@sntech.de>
+Link: https://patch.msgid.link/20260104191448.2693309-3-heiko@sntech.de
+(cherry picked from commit 5a16e131ddbacdd7acfb8cab6ff0ca1c57339600)
+Signed-off-by: Heiko Stuebner <heiko@sntech.de>
+---
+ arch/arm64/boot/dts/rockchip/rk3568-qnap-ts233.dts  |  6 +++---
+ arch/arm64/boot/dts/rockchip/rk3568-qnap-ts433.dts  |  6 +++---
+ arch/arm64/boot/dts/rockchip/rk3568-qnap-tsx33.dtsi | 10 +++++-----
+ 3 files changed, 11 insertions(+), 11 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/rockchip/rk3568-qnap-ts233.dts b/arch/arm64/boot/dts/rockchip/rk3568-qnap-ts233.dts
+index 9a7d58e7ccc0..e76502180788 100644
+--- a/arch/arm64/boot/dts/rockchip/rk3568-qnap-ts233.dts
++++ b/arch/arm64/boot/dts/rockchip/rk3568-qnap-ts233.dts
+@@ -18,8 +18,8 @@ aliases {
+ 	};
+ };
+ 
+-/* connected to sata2 */
+-&combphy2 {
++/* Connected to usb_host0_xhci */
++&combphy0 {
+ 	status = "okay";
+ };
+ 
+@@ -93,7 +93,7 @@ hdd2_led_pin: hdd2-led-pin {
+ 	};
+ };
+ 
+-&sata2 {
++&sata1 {
+ 	status = "okay";
+ };
+ 
+diff --git a/arch/arm64/boot/dts/rockchip/rk3568-qnap-ts433.dts b/arch/arm64/boot/dts/rockchip/rk3568-qnap-ts433.dts
+index 02d0974d79be..708e7f1f8d0d 100644
+--- a/arch/arm64/boot/dts/rockchip/rk3568-qnap-ts433.dts
++++ b/arch/arm64/boot/dts/rockchip/rk3568-qnap-ts433.dts
+@@ -28,8 +28,8 @@ vcc3v3_pcie: regulator-vcc3v3-pcie {
+ 	};
+ };
+ 
+-/* connected to sata2 */
+-&combphy2 {
++/* Connected to usb_host0_xhci */
++&combphy0 {
+ 	status = "okay";
+ };
+ 
+@@ -151,7 +151,7 @@ hdd4_led_pin: hdd4_led-pin {
+ 	};
+ };
+ 
+-&sata2 {
++&sata1 {
+ 	status = "okay";
+ };
+ 
+diff --git a/arch/arm64/boot/dts/rockchip/rk3568-qnap-tsx33.dtsi b/arch/arm64/boot/dts/rockchip/rk3568-qnap-tsx33.dtsi
+index c372ca40fd50..482d8584ec88 100644
+--- a/arch/arm64/boot/dts/rockchip/rk3568-qnap-tsx33.dtsi
++++ b/arch/arm64/boot/dts/rockchip/rk3568-qnap-tsx33.dtsi
+@@ -112,13 +112,13 @@ vcc5v0_usb: regulator-vcc5v0-usb {
+ 	};
+ };
+ 
+-/* connected to usb_host0_xhci */
+-&combphy0 {
++/* Connected USB3 on TS133 / SATA1 on all the others */
++&combphy1 {
+ 	status = "okay";
+ };
+ 
+-/* connected to sata1 */
+-&combphy1 {
++/* Connected to SATA2 */
++&combphy2 {
+ 	status = "okay";
+ };
+ 
+@@ -484,7 +484,7 @@ &pmu_io_domains {
+ 	status = "okay";
+ };
+ 
+-&sata1 {
++&sata2 {
+ 	status = "okay";
+ };
+ 
+-- 
+2.52.0
+

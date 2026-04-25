@@ -1,0 +1,36 @@
+From bd056b945da5e212ea3a58986e85ea6b9675c085 Mon Sep 17 00:00:00 2001
+From: Heiko Stuebner <heiko@sntech.de>
+Date: Thu, 13 Nov 2025 17:52:16 +0100
+Subject: [PATCH 10/57] UPSTREAM: mfd: qnap-mcu: Use EPROTO in stead of EIO on
+ checksum errors
+
+EPROTO stands for protocol error and a lot of driver already use it
+to designate errors in the sent or received data from a peripheral.
+
+So use it in the qnap-mcu as well for checksum errors.
+
+Signed-off-by: Heiko Stuebner <heiko@sntech.de>
+Link: https://patch.msgid.link/20251113165218.449616-3-heiko@sntech.de
+Signed-off-by: Lee Jones <lee@kernel.org>
+(cherry picked from commit c94fce30e190555d74e2769b5fe4a932d0ad432e)
+Signed-off-by: Heiko Stuebner <heiko@sntech.de>
+---
+ drivers/mfd/qnap-mcu.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/mfd/qnap-mcu.c b/drivers/mfd/qnap-mcu.c
+index e3210541ec56..b4b630f7d413 100644
+--- a/drivers/mfd/qnap-mcu.c
++++ b/drivers/mfd/qnap-mcu.c
+@@ -178,7 +178,7 @@ int qnap_mcu_exec(struct qnap_mcu *mcu,
+ 	crc = qnap_mcu_csum(rx, reply->received - QNAP_MCU_CHECKSUM_SIZE);
+ 	if (crc != rx[reply->received - QNAP_MCU_CHECKSUM_SIZE]) {
+ 		dev_err(&mcu->serdev->dev, "Invalid Checksum received\n");
+-		return -EIO;
++		return -EPROTO;
+ 	}
+ 
+ 	memcpy(reply_data, rx, reply_data_size);
+-- 
+2.52.0
+

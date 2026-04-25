@@ -1,0 +1,127 @@
+From fe259460170033e4d0c1105302628e1661f682c2 Mon Sep 17 00:00:00 2001
+From: Heiko Stuebner <heiko@sntech.de>
+Date: Wed, 28 Jan 2026 21:32:42 +0100
+Subject: [PATCH 58/58] HACK: disable usb phy regulators temporarily
+
+We want to get rid of the always-on/boot-on properties but for
+this need to make sure to find out which phy is supplied by which
+regulator.
+
+On my old-revision TS233, none of the two are needed, while on the
+new-revision TS133 the vcc_5v0_otg seems to control both ports.
+
+So now we need to find someone with a new-revision TS233/433 to check
+which regulator enables which usb port.
+
+Testing procedure:
+- With this patch, both vcc5v0-host and vcc5v0-otg are kernel mananged
+  and lost their regulator-always-on and regulator-boot-on properties.
+
+- At this point the Kernel should not find any usb devices on any port.
+
+- Step1: Add back
+	regulator-always-on;
+	regulator-boot-on;
+  to vcc5v0-host and check which usb-ports work
+
+- Step2: Remove the properties from vcc5v0-host and add them to vcc5v0-otg
+  and check which usb-ports work now.
+
+Ideally to prevent confusion, find the corresponding fcFOOBAR.usb devices
+from /sys/bus/usb/devices that represent the bus number the kernel reports.
+---
+ arch/arm64/boot/dts/rockchip/rk3566-qnap-ts133.dts  | 2 +-
+ arch/arm64/boot/dts/rockchip/rk3568-qnap-ts233.dts  | 4 ++--
+ arch/arm64/boot/dts/rockchip/rk3568-qnap-ts433.dts  | 4 ++--
+ arch/arm64/boot/dts/rockchip/rk3568-qnap-tsx33.dtsi | 8 +++-----
+ 4 files changed, 8 insertions(+), 10 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/rockchip/rk3566-qnap-ts133.dts b/arch/arm64/boot/dts/rockchip/rk3566-qnap-ts133.dts
+index bf56b5d9fbe3..87a19797cde3 100644
+--- a/arch/arm64/boot/dts/rockchip/rk3566-qnap-ts133.dts
++++ b/arch/arm64/boot/dts/rockchip/rk3566-qnap-ts133.dts
+@@ -90,7 +90,7 @@ eth_phy0_reset_pin: eth-phy0-reset-pin {
+ 
+ /* connected to usb_host1_xhci */
+ &usb2phy0_host {
+-	phy-supply = <&vcc5v0_otg>;
++//	phy-supply = <&vcc5v0_otg>;
+ 	status = "okay";
+ };
+ 
+diff --git a/arch/arm64/boot/dts/rockchip/rk3568-qnap-ts233.dts b/arch/arm64/boot/dts/rockchip/rk3568-qnap-ts233.dts
+index 1c90221dc0ff..7b86ce9560be 100644
+--- a/arch/arm64/boot/dts/rockchip/rk3568-qnap-ts233.dts
++++ b/arch/arm64/boot/dts/rockchip/rk3568-qnap-ts233.dts
+@@ -146,13 +146,13 @@ &usb2phy1 {
+ 
+ /* connected to usb_host1_ehci/ohci */
+ &usb2phy1_host {
+-	phy-supply = <&vcc5v0_host>;
++//	phy-supply = <&vcc5v0_host>;
+ 	status = "okay";
+ };
+ 
+ /* connected to usb_host0_ehci/ohci */
+ &usb2phy1_otg {
+-	phy-supply = <&vcc5v0_host>;
++//	phy-supply = <&vcc5v0_otg>;
+ 	status = "okay";
+ };
+ 
+diff --git a/arch/arm64/boot/dts/rockchip/rk3568-qnap-ts433.dts b/arch/arm64/boot/dts/rockchip/rk3568-qnap-ts433.dts
+index f51aeda94bfc..df9e7b744df1 100644
+--- a/arch/arm64/boot/dts/rockchip/rk3568-qnap-ts433.dts
++++ b/arch/arm64/boot/dts/rockchip/rk3568-qnap-ts433.dts
+@@ -174,13 +174,13 @@ &usb2phy1 {
+ 
+ /* connected to usb_host1_ehci/ohci */
+ &usb2phy1_host {
+-	phy-supply = <&vcc5v0_host>;
++//	phy-supply = <&vcc5v0_host>;
+ 	status = "okay";
+ };
+ 
+ /* connected to usb_host0_ehci/ohci */
+ &usb2phy1_otg {
+-	phy-supply = <&vcc5v0_host>;
++//	phy-supply = <&vcc5v0_host>;
+ 	status = "okay";
+ };
+ 
+diff --git a/arch/arm64/boot/dts/rockchip/rk3568-qnap-tsx33.dtsi b/arch/arm64/boot/dts/rockchip/rk3568-qnap-tsx33.dtsi
+index dc347c3fa634..ff5b86df895a 100644
+--- a/arch/arm64/boot/dts/rockchip/rk3568-qnap-tsx33.dtsi
++++ b/arch/arm64/boot/dts/rockchip/rk3568-qnap-tsx33.dtsi
+@@ -64,8 +64,6 @@ vcc5v0_host: regulator-vcc5v0-host {
+ 		pinctrl-0 = <&vcc5v0_host_en>;
+ 		gpio = <&gpio0 RK_PA6 GPIO_ACTIVE_HIGH>;
+ 		regulator-name = "vcc5v0_host";
+-		regulator-always-on;
+-		regulator-boot-on;
+ 		regulator-min-microvolt = <5000000>;
+ 		regulator-max-microvolt = <5000000>;
+ 		vin-supply = <&vcc5v0_usb>;
+@@ -78,8 +76,6 @@ vcc5v0_otg: regulator-vcc5v0-otg {
+ 		pinctrl-names = "default";
+ 		pinctrl-0 = <&vcc5v0_otg_en>;
+ 		regulator-name = "vcc5v0_otg";
+-		regulator-always-on;
+-		regulator-boot-on;
+ 		regulator-min-microvolt = <5000000>;
+ 		regulator-max-microvolt = <5000000>;
+ 		vin-supply = <&vcc5v0_usb>;
+@@ -633,7 +629,9 @@ &usb2phy0 {
+ 
+ /* connected to usb_host0_xhci */
+ &usb2phy0_otg {
+-	phy-supply = <&vcc5v0_otg>;
++//correct - on TS133 - with revision pcb
++//does not seem to matter on TS233 without revision
++//	phy-supply = <&vcc5v0_otg>;
+ 	status = "okay";
+ };
+ 
+-- 
+2.52.0
+

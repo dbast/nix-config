@@ -1,0 +1,49 @@
+From 4648df19d63beaa903ad0cd2d737faa4e268db73 Mon Sep 17 00:00:00 2001
+From: Heiko Stuebner <heiko@sntech.de>
+Date: Tue, 4 Nov 2025 00:49:26 +0100
+Subject: [PATCH 05/57] UPSTREAM: arm64: dts: rockchip: add missing clocks for
+ cpu cores on rk356x
+
+All cpu cores are supplied by the same clock, but all except the first
+core are missing that clocks reference - add the missing ones.
+
+Reviewed-by: Diederik de Haas <diederik@cknow-tech.com>
+Signed-off-by: Heiko Stuebner <heiko@sntech.de>
+Link: https://patch.msgid.link/20251103234926.416137-4-heiko@sntech.de
+(cherry picked from commit e06a419eaab9cee7cd5bbb0cfcfbe49e443a9d75)
+Signed-off-by: Heiko Stuebner <heiko@sntech.de>
+---
+ arch/arm64/boot/dts/rockchip/rk356x-base.dtsi | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/rockchip/rk356x-base.dtsi b/arch/arm64/boot/dts/rockchip/rk356x-base.dtsi
+index 60adc3897fd5..d0dc7f8d0351 100644
+--- a/arch/arm64/boot/dts/rockchip/rk356x-base.dtsi
++++ b/arch/arm64/boot/dts/rockchip/rk356x-base.dtsi
+@@ -69,6 +69,7 @@ cpu1: cpu@100 {
+ 			device_type = "cpu";
+ 			compatible = "arm,cortex-a55";
+ 			reg = <0x0 0x100>;
++			clocks = <&scmi_clk SCMI_CLK_CPU>;
+ 			#cooling-cells = <2>;
+ 			enable-method = "psci";
+ 			i-cache-size = <0x8000>;
+@@ -84,6 +85,7 @@ cpu2: cpu@200 {
+ 			device_type = "cpu";
+ 			compatible = "arm,cortex-a55";
+ 			reg = <0x0 0x200>;
++			clocks = <&scmi_clk SCMI_CLK_CPU>;
+ 			#cooling-cells = <2>;
+ 			enable-method = "psci";
+ 			i-cache-size = <0x8000>;
+@@ -99,6 +101,7 @@ cpu3: cpu@300 {
+ 			device_type = "cpu";
+ 			compatible = "arm,cortex-a55";
+ 			reg = <0x0 0x300>;
++			clocks = <&scmi_clk SCMI_CLK_CPU>;
+ 			#cooling-cells = <2>;
+ 			enable-method = "psci";
+ 			i-cache-size = <0x8000>;
+-- 
+2.52.0
+
