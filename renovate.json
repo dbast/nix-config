@@ -12,7 +12,7 @@
         "/(^|/)flake\\.nix$/"
       ],
       "matchStrings": [
-        "# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+) versioning=(?<versioning>\\S+) extractVersion=(?<extractVersion>\\S+)\\s+\\S+\\.url = \\\"github:[^\\\"]+/(?<currentValue>[^/\\\"]+)\\\";"
+        "# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+) packageName=(?<packageName>\\S+) versioning=(?<versioning>\\S+) extractVersion=(?<extractVersion>\\S+)\\s+\\S+\\.url = \\\"github:[^\\\"]+/(?<currentValue>[^/\\\"]+)\\\";"
       ]
     }
   ],
@@ -21,5 +21,20 @@
   },
   "nix": {
     "enabled": true
-  }
+  },
+  "packageRules": [
+    {
+      "matchManagers": [
+        "custom.regex"
+      ],
+      "postUpgradeTasks": {
+        "commands": [
+          "nix --extra-experimental-features 'nix-command flakes' flake update {{{depName}}}"
+        ],
+        "fileFilters": [
+          "flake.lock"
+        ]
+      }
+    }
+  ]
 }
