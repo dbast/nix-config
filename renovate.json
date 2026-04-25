@@ -5,6 +5,17 @@
     "customManagers:githubActionsVersions",
     "helpers:pinGitHubActionDigestsToSemver"
   ],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "fileMatch": [
+        "(^|/)flake\\.nix$"
+      ],
+      "matchStrings": [
+        "# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+) versioning=(?<versioning>\\S+) extractVersion=(?<extractVersion>\\S+)\\s+\\S+\\.url = \\\"github:[^\\\"]+/(?<currentValue>[^/\\\"]+)\\\";"
+      ]
+    }
+  ],
   "lockFileMaintenance": {
     "enabled": true
   },
