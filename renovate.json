@@ -8,8 +8,8 @@
   "customManagers": [
     {
       "customType": "regex",
-      "fileMatch": [
-        "(^|/)flake\\.nix$"
+      "managerFilePatterns": [
+        "/(^|/)flake\\.nix$/"
       ],
       "matchStrings": [
         "# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+) versioning=(?<versioning>\\S+) extractVersion=(?<extractVersion>\\S+)\\s+\\S+\\.url = \\\"github:[^\\\"]+/(?<currentValue>[^/\\\"]+)\\\";"
