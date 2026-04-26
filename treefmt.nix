@@ -5,6 +5,7 @@
     deadnix.enable = true;
     jsonfmt.enable = true;
     keep-sorted.enable = true;
+    mdformat.enable = true;
     nixfmt.enable = true;
     shellcheck.enable = true;
     statix.enable = true;
