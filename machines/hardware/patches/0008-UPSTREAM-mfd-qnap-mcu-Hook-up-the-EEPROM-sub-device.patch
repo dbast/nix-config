@@ -1,0 +1,31 @@
+From ac51b1e32274d532969664c8034d3cb5645fc693 Mon Sep 17 00:00:00 2001
+From: Heiko Stuebner <heiko@sntech.de>
+Date: Tue, 4 Nov 2025 00:29:42 +0100
+Subject: [PATCH 08/57] UPSTREAM: mfd: qnap-mcu: Hook up the EEPROM sub-device
+
+Add the qnap-mcu-eeprom platform-driver as sub-device for the MCU.
+
+Signed-off-by: Heiko Stuebner <heiko@sntech.de>
+Link: https://patch.msgid.link/20251103232942.410386-3-heiko@sntech.de
+Signed-off-by: Lee Jones <lee@kernel.org>
+(cherry picked from commit 0e056211b8c92b9a051915afbc0409bc1cadc341)
+Signed-off-by: Heiko Stuebner <heiko@sntech.de>
+---
+ drivers/mfd/qnap-mcu.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/drivers/mfd/qnap-mcu.c b/drivers/mfd/qnap-mcu.c
+index 4ec1f4cf902f..2be429a50611 100644
+--- a/drivers/mfd/qnap-mcu.c
++++ b/drivers/mfd/qnap-mcu.c
+@@ -264,6 +264,7 @@ static const struct qnap_mcu_variant qnap_ts433_mcu = {
+ };
+ 
+ static struct mfd_cell qnap_mcu_cells[] = {
++	{ .name = "qnap-mcu-eeprom", },
+ 	{ .name = "qnap-mcu-input", },
+ 	{ .name = "qnap-mcu-leds", },
+ 	{ .name = "qnap-mcu-hwmon", }
+-- 
+2.52.0
+

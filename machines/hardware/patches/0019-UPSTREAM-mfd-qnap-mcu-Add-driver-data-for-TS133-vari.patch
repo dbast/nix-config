@@ -1,0 +1,52 @@
+From 33ef679964efb03edbcbe28fef9f03a13070b54a Mon Sep 17 00:00:00 2001
+From: Heiko Stuebner <heiko@sntech.de>
+Date: Sun, 4 Jan 2026 18:33:10 +0100
+Subject: [PATCH 19/57] UPSTREAM: mfd: qnap-mcu: Add driver data for TS133
+ variant
+
+Add the TS133 compatible and affiliated driver data to qnap-mcu.
+The TS133 is mostly similar to the TS233/TS433, except only having
+one drive and no USB-LED.
+
+The fan pwm-limits from the vendor-configuration also are the same
+as for the TS233/TS433 variants.
+
+Signed-off-by: Heiko Stuebner <heiko@sntech.de>
+Link: https://patch.msgid.link/20260104173310.2685852-3-heiko@sntech.de
+Signed-off-by: Lee Jones <lee@kernel.org>
+(cherry picked from commit 2051b6941d6030a680d51f207d18cc10d89a9793)
+Signed-off-by: Heiko Stuebner <heiko@sntech.de>
+---
+ drivers/mfd/qnap-mcu.c | 9 +++++++++
+ 1 file changed, 9 insertions(+)
+
+diff --git a/drivers/mfd/qnap-mcu.c b/drivers/mfd/qnap-mcu.c
+index f81c69f22254..8de974ddac3e 100644
+--- a/drivers/mfd/qnap-mcu.c
++++ b/drivers/mfd/qnap-mcu.c
+@@ -316,6 +316,14 @@ static int qnap_mcu_power_off(struct sys_off_data *data)
+ 	return NOTIFY_DONE;
+ }
+ 
++static const struct qnap_mcu_variant qnap_ts133_mcu = {
++	.baud_rate = 115200,
++	.num_drives = 1,
++	.fan_pwm_min = 51,  /* Specified in original model.conf */
++	.fan_pwm_max = 255,
++	.usb_led = false,
++};
++
+ static const struct qnap_mcu_variant qnap_ts233_mcu = {
+ 	.baud_rate = 115200,
+ 	.num_drives = 2,
+@@ -397,6 +405,7 @@ static int qnap_mcu_probe(struct serdev_device *serdev)
+ }
+ 
+ static const struct of_device_id qnap_mcu_dt_ids[] = {
++	{ .compatible = "qnap,ts133-mcu", .data = &qnap_ts133_mcu },
+ 	{ .compatible = "qnap,ts233-mcu", .data = &qnap_ts233_mcu },
+ 	{ .compatible = "qnap,ts433-mcu", .data = &qnap_ts433_mcu },
+ 	{ /* sentinel */ }
+-- 
+2.52.0
+

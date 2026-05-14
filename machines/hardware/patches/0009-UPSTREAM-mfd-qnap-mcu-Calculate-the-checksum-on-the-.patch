@@ -1,0 +1,41 @@
+From 227fcf9d2143a90e75d28c18954e35b68dfc2b2a Mon Sep 17 00:00:00 2001
+From: Heiko Stuebner <heiko@sntech.de>
+Date: Thu, 13 Nov 2025 17:52:15 +0100
+Subject: [PATCH 09/57] UPSTREAM: mfd: qnap-mcu: Calculate the checksum on the
+ actual number of bytes received
+
+In the case of an error message, the number of received bytes can be
+less than originally expected but still contain a valid message.
+
+If the transfer itself ended in an error we would exit earlier already.
+
+So calculate the checksum on the number of received bytes and not the
+number of expected bytes.
+
+Signed-off-by: Heiko Stuebner <heiko@sntech.de>
+Link: https://patch.msgid.link/20251113165218.449616-2-heiko@sntech.de
+Signed-off-by: Lee Jones <lee@kernel.org>
+(cherry picked from commit b4881070a02b017aea84592c424d5a980ed261c4)
+Signed-off-by: Heiko Stuebner <heiko@sntech.de>
+---
+ drivers/mfd/qnap-mcu.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/mfd/qnap-mcu.c b/drivers/mfd/qnap-mcu.c
+index 2be429a50611..e3210541ec56 100644
+--- a/drivers/mfd/qnap-mcu.c
++++ b/drivers/mfd/qnap-mcu.c
+@@ -175,8 +175,8 @@ int qnap_mcu_exec(struct qnap_mcu *mcu,
+ 		return -ETIMEDOUT;
+ 	}
+ 
+-	crc = qnap_mcu_csum(rx, reply_data_size);
+-	if (crc != rx[reply_data_size]) {
++	crc = qnap_mcu_csum(rx, reply->received - QNAP_MCU_CHECKSUM_SIZE);
++	if (crc != rx[reply->received - QNAP_MCU_CHECKSUM_SIZE]) {
+ 		dev_err(&mcu->serdev->dev, "Invalid Checksum received\n");
+ 		return -EIO;
+ 	}
+-- 
+2.52.0
+

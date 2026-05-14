@@ -1,0 +1,37 @@
+From b380a5d1ce8d6e1652de1d483d107eca55f95c45 Mon Sep 17 00:00:00 2001
+From: Heiko Stuebner <heiko@sntech.de>
+Date: Tue, 4 Nov 2025 00:40:32 +0100
+Subject: [PATCH 03/57] UPSTREAM: dt-bindings: clock: rk3568: Drop CLK_NR_CLKS
+ define
+
+CLK_NR_CLKS has always only be used on the driver side to calculate array
+sizes should never have been part of the clock-binding.
+
+Let's drop it, since the kernel code no longer uses it either and nothing
+else has ever used it.
+
+Acked-by: Conor Dooley <conor.dooley@microchip.com>
+Signed-off-by: Heiko Stuebner <heiko@sntech.de>
+Link: https://patch.msgid.link/20251103234032.413563-3-heiko@sntech.de
+(cherry picked from commit ca38f0f65eefd79889b409c89c6932d7e2fe0993)
+Signed-off-by: Heiko Stuebner <heiko@sntech.de>
+---
+ include/dt-bindings/clock/rk3568-cru.h | 2 --
+ 1 file changed, 2 deletions(-)
+
+diff --git a/include/dt-bindings/clock/rk3568-cru.h b/include/dt-bindings/clock/rk3568-cru.h
+index 18bb8d41d741..1e0aef8a645d 100644
+--- a/include/dt-bindings/clock/rk3568-cru.h
++++ b/include/dt-bindings/clock/rk3568-cru.h
+@@ -483,8 +483,6 @@
+ 
+ #define PCLK_CORE_PVTM		450
+ 
+-#define CLK_NR_CLKS		(PCLK_CORE_PVTM + 1)
+-
+ /* scmi-clocks indices */
+ 
+ #define SCMI_CLK_CPU		0
+-- 
+2.52.0
+

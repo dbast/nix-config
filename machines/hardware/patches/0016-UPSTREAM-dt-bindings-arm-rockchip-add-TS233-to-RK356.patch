@@ -1,0 +1,40 @@
+From a18536faa8df03220d90c89a22fa431c42651db3 Mon Sep 17 00:00:00 2001
+From: Heiko Stuebner <heiko@sntech.de>
+Date: Wed, 12 Nov 2025 22:42:05 +0100
+Subject: [PATCH 16/57] UPSTREAM: dt-bindings: arm: rockchip: add TS233 to
+ RK3568-based QNAP NAS devices
+
+QNAP builds a number of variants of the RK3568-based NAS design.
+
+Add the 2-bay TS233 variant.
+
+Acked-by: Conor Dooley <conor.dooley@microchip.com>
+Signed-off-by: Heiko Stuebner <heiko@sntech.de>
+Link: https://patch.msgid.link/20251112214206.423244-5-heiko@sntech.de
+(cherry picked from commit a576b51e13870ba957e13e6cc265431260a32a77)
+Signed-off-by: Heiko Stuebner <heiko@sntech.de>
+---
+ Documentation/devicetree/bindings/arm/rockchip.yaml | 6 ++++--
+ 1 file changed, 4 insertions(+), 2 deletions(-)
+
+diff --git a/Documentation/devicetree/bindings/arm/rockchip.yaml b/Documentation/devicetree/bindings/arm/rockchip.yaml
+index 6aceaa8acbb2..790f910aa38b 100644
+--- a/Documentation/devicetree/bindings/arm/rockchip.yaml
++++ b/Documentation/devicetree/bindings/arm/rockchip.yaml
+@@ -868,9 +868,11 @@ properties:
+           - const: prt,mecsbc
+           - const: rockchip,rk3568
+ 
+-      - description: QNAP TS-433-4G 4-Bay NAS
++      - description: QNAP TS-x33 NAS devices
+         items:
+-          - const: qnap,ts433
++          - enum:
++              - qnap,ts233
++              - qnap,ts433
+           - const: rockchip,rk3568
+ 
+       - description: Radxa Compute Module 3 (CM3)
+-- 
+2.52.0
+

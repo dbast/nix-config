@@ -1,0 +1,117 @@
+From 29e60f06b0d7169366c203cb6f14bb37e2550c62 Mon Sep 17 00:00:00 2001
+From: Heiko Stuebner <heiko@sntech.de>
+Date: Sun, 4 Jan 2026 20:14:48 +0100
+Subject: [PATCH 24/57] UPSTREAM: arm64: dts: rockchip: Add TS133 variant of
+ the QNAP NAS series
+
+The TS133 is a one-bay NAS mostly similar to the other devices in the
+series. The main difference is that it is build around the RK3566 SoC
+instead of the RK3568 variant.
+
+The RK3566/RK3568 are mostly similar with only slight variants in both
+speed and some specific peripherals - the RK3568 has more.
+
+The specific for the NAS series stay the same though.
+
+Signed-off-by: Heiko Stuebner <heiko@sntech.de>
+Link: https://patch.msgid.link/20260104191448.2693309-6-heiko@sntech.de
+(cherry picked from commit 26cfaee2972c95a6d3ad85549df089a4ee93a551)
+Signed-off-by: Heiko Stuebner <heiko@sntech.de>
+---
+ arch/arm64/boot/dts/rockchip/Makefile         |  1 +
+ .../boot/dts/rockchip/rk3566-qnap-ts133.dts   | 71 +++++++++++++++++++
+ 2 files changed, 72 insertions(+)
+ create mode 100644 arch/arm64/boot/dts/rockchip/rk3566-qnap-ts133.dts
+
+diff --git a/arch/arm64/boot/dts/rockchip/Makefile b/arch/arm64/boot/dts/rockchip/Makefile
+index d1d384df00b7..d0f22d3a3bb4 100644
+--- a/arch/arm64/boot/dts/rockchip/Makefile
++++ b/arch/arm64/boot/dts/rockchip/Makefile
+@@ -114,6 +114,7 @@ dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3566-powkiddy-rgb20sx.dtb
+ dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3566-powkiddy-rgb30.dtb
+ dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3566-powkiddy-rk2023.dtb
+ dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3566-powkiddy-x55.dtb
++dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3566-qnap-ts133.dtb
+ dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3566-quartz64-a.dtb
+ dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3566-quartz64-b.dtb
+ dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3566-radxa-cm3-io.dtb
+diff --git a/arch/arm64/boot/dts/rockchip/rk3566-qnap-ts133.dts b/arch/arm64/boot/dts/rockchip/rk3566-qnap-ts133.dts
+new file mode 100644
+index 000000000000..d605a712de5b
+--- /dev/null
++++ b/arch/arm64/boot/dts/rockchip/rk3566-qnap-ts133.dts
+@@ -0,0 +1,71 @@
++// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
++/*
++ * Copyright (c) 2021 Rockchip Electronics Co., Ltd.
++ * Copyright (c) 2024 Heiko Stuebner <heiko@sntech.de>
++ */
++
++/dts-v1/;
++
++#include "rk3566.dtsi"
++#include "rk3568-qnap-tsx33.dtsi"
++
++/ {
++	model = "Qnap TS-133-2G NAS System 1-Bay";
++	compatible = "qnap,ts133", "rockchip,rk3566";
++
++	aliases {
++		ethernet0 = &gmac1;
++	};
++};
++
++&gmac1 {
++	assigned-clocks = <&cru SCLK_GMAC1_RX_TX>, <&cru SCLK_GMAC1>;
++	assigned-clock-parents = <&cru SCLK_GMAC1_RGMII_SPEED>, <&cru CLK_MAC1_2TOP>;
++	assigned-clock-rates = <0>, <125000000>;
++	clock_in_out = "output";
++	phy-handle = <&rgmii_phy0>;
++	phy-mode = "rgmii-id";
++	pinctrl-names = "default";
++	pinctrl-0 = <&gmac1m1_miim
++		     &gmac1m1_tx_bus2
++		     &gmac1m1_rx_bus2
++		     &gmac1m1_rgmii_clk
++		     &gmac1m1_rgmii_bus>;
++	status = "okay";
++};
++
++&mcu {
++	compatible = "qnap,ts133-mcu";
++};
++
++&mdio1 {
++	rgmii_phy0: ethernet-phy@3 {
++		/* Motorcomm YT8521 phy */
++		compatible = "ethernet-phy-ieee802.3-c22";
++		reg = <0x3>;
++		pinctrl-0 = <&eth_phy0_reset_pin>;
++		pinctrl-names = "default";
++		reset-assert-us = <10000>;
++		reset-gpios = <&gpio0 RK_PC6 GPIO_ACTIVE_LOW>;
++	};
++};
++
++&pinctrl {
++	gmac1 {
++		eth_phy0_reset_pin: eth-phy0-reset-pin {
++			rockchip,pins = <0 RK_PC6 RK_FUNC_GPIO &pcfg_pull_up>;
++		};
++	};
++};
++
++/* connected to usb_host1_xhci */
++&usb2phy0_host {
++	phy-supply = <&vcc5v0_otg>;
++	status = "okay";
++};
++
++/* USB3 port on backside */
++&usb_host1_xhci {
++	dr_mode = "host";
++	status = "okay";
++};
+-- 
+2.52.0
+

@@ -1,0 +1,177 @@
+From 983edee9b58aab01dab713b458985fb0f680a5b7 Mon Sep 17 00:00:00 2001
+From: Heiko Stuebner <heiko@sntech.de>
+Date: Tue, 4 Nov 2025 00:29:41 +0100
+Subject: [PATCH 07/57] UPSTREAM: nvmem: Add driver for the eeprom in qnap-mcu
+ controllers
+
+The qnap-mcu also has an eeprom connected to it, that contains some
+specific product-information like the mac addresses for the network
+interfaces.
+
+Add a nvmem driver for it.
+
+Signed-off-by: Heiko Stuebner <heiko@sntech.de>
+Acked-by: Srinivas Kandagatla <srini@kernel.org>
+Signed-off-by: Srinivas Kandagatla <srini@kernel.org>
+(cherry picked from commit 0cf064be87a6ae0708f171c6b863b26ba9453054)
+Signed-off-by: Heiko Stuebner <heiko@sntech.de>
+---
+ drivers/nvmem/Kconfig           |   9 +++
+ drivers/nvmem/Makefile          |   2 +
+ drivers/nvmem/qnap-mcu-eeprom.c | 111 ++++++++++++++++++++++++++++++++
+ 3 files changed, 122 insertions(+)
+ create mode 100644 drivers/nvmem/qnap-mcu-eeprom.c
+
+diff --git a/drivers/nvmem/Kconfig b/drivers/nvmem/Kconfig
+index e0d88d3199c1..bf47a982cf62 100644
+--- a/drivers/nvmem/Kconfig
++++ b/drivers/nvmem/Kconfig
+@@ -285,6 +285,15 @@ config NVMEM_QCOM_SEC_QFPROM
+           This driver can also be built as a module. If so, the module will be called
+           nvmem_sec_qfprom.
+ 
++config NVMEM_QNAP_MCU_EEPROM
++	tristate "QNAP MCU EEPROM Support"
++	depends on MFD_QNAP_MCU
++	help
++	  Say y here to enable support for accessing the EEPROM attached to
++	  QNAP MCU devices. This EEPROM contains additional runtime device
++	  information, like MAC addresses for ethernet devices that do not
++	  contain their own mac storage.
++
+ config NVMEM_RAVE_SP_EEPROM
+ 	tristate "Rave SP EEPROM Support"
+ 	depends on RAVE_SP_CORE
+diff --git a/drivers/nvmem/Makefile b/drivers/nvmem/Makefile
+index 70a4464dcb1e..7252b8ec88d4 100644
+--- a/drivers/nvmem/Makefile
++++ b/drivers/nvmem/Makefile
+@@ -56,6 +56,8 @@ obj-$(CONFIG_NVMEM_QCOM_QFPROM)		+= nvmem_qfprom.o
+ nvmem_qfprom-y				:= qfprom.o
+ obj-$(CONFIG_NVMEM_QCOM_SEC_QFPROM)	+= nvmem_sec_qfprom.o
+ nvmem_sec_qfprom-y			:= sec-qfprom.o
++obj-$(CONFIG_NVMEM_QNAP_MCU_EEPROM)	+= nvmem-qnap-mcu-eeprom.o
++nvmem-qnap-mcu-eeprom-y			:= qnap-mcu-eeprom.o
+ obj-$(CONFIG_NVMEM_RAVE_SP_EEPROM)	+= nvmem-rave-sp-eeprom.o
+ nvmem-rave-sp-eeprom-y			:= rave-sp-eeprom.o
+ obj-$(CONFIG_NVMEM_RCAR_EFUSE)		+= nvmem-rcar-efuse.o
+diff --git a/drivers/nvmem/qnap-mcu-eeprom.c b/drivers/nvmem/qnap-mcu-eeprom.c
+new file mode 100644
+index 000000000000..0b919895b3b2
+--- /dev/null
++++ b/drivers/nvmem/qnap-mcu-eeprom.c
+@@ -0,0 +1,111 @@
++// SPDX-License-Identifier: GPL-2.0-or-later
++/*
++ * ee1004 - driver for DDR4 SPD EEPROMs
++ *
++ * Copyright (C) 2017-2019 Jean Delvare
++ *
++ * Based on the at24 driver:
++ * Copyright (C) 2005-2007 David Brownell
++ * Copyright (C) 2008 Wolfram Sang, Pengutronix
++ */
++
++#include <linux/mfd/qnap-mcu.h>
++#include <linux/module.h>
++#include <linux/nvmem-provider.h>
++#include <linux/platform_device.h>
++#include <linux/slab.h>
++
++/* Determined by trial and error until read anomalies appeared */
++#define QNAP_MCU_EEPROM_SIZE		256
++#define QNAP_MCU_EEPROM_BLOCK_SIZE	32
++
++static int qnap_mcu_eeprom_read_block(struct qnap_mcu *mcu, unsigned int offset,
++				      void *val, size_t bytes)
++{
++	const u8 cmd[] = { 0xf7, 0xa1, offset, bytes };
++	u8 *reply;
++	int ret = 0;
++
++	reply = kzalloc(bytes + sizeof(cmd), GFP_KERNEL);
++	if (!reply)
++		return -ENOMEM;
++
++	ret = qnap_mcu_exec(mcu, cmd, sizeof(cmd), reply, bytes + sizeof(cmd));
++	if (ret)
++		goto out;
++
++	/* First bytes must mirror the sent command */
++	if (memcmp(cmd, reply, sizeof(cmd))) {
++		ret = -EIO;
++		goto out;
++	}
++
++	memcpy(val, reply + sizeof(cmd), bytes);
++
++out:
++	kfree(reply);
++	return ret;
++}
++
++static int qnap_mcu_eeprom_read(void *priv, unsigned int offset, void *val, size_t bytes)
++{
++	struct qnap_mcu *mcu = priv;
++	int pos = 0, ret;
++	u8 *buf = val;
++
++	if (unlikely(!bytes))
++		return 0;
++
++	while (bytes > 0) {
++		size_t to_read = (bytes > QNAP_MCU_EEPROM_BLOCK_SIZE) ?
++						QNAP_MCU_EEPROM_BLOCK_SIZE : bytes;
++
++		ret = qnap_mcu_eeprom_read_block(mcu, offset + pos, &buf[pos], to_read);
++		if (ret < 0)
++			return ret;
++
++		pos += to_read;
++		bytes -= to_read;
++	}
++
++	return 0;
++}
++
++static int qnap_mcu_eeprom_probe(struct platform_device *pdev)
++{
++	struct qnap_mcu *mcu = dev_get_drvdata(pdev->dev.parent);
++	struct nvmem_config nvcfg = {};
++	struct nvmem_device *ndev;
++
++	nvcfg.dev = &pdev->dev;
++	nvcfg.of_node = pdev->dev.parent->of_node;
++	nvcfg.name = dev_name(&pdev->dev);
++	nvcfg.id = NVMEM_DEVID_NONE;
++	nvcfg.owner = THIS_MODULE;
++	nvcfg.type = NVMEM_TYPE_EEPROM;
++	nvcfg.read_only = true;
++	nvcfg.root_only = false;
++	nvcfg.reg_read = qnap_mcu_eeprom_read;
++	nvcfg.size = QNAP_MCU_EEPROM_SIZE,
++	nvcfg.word_size = 1,
++	nvcfg.stride = 1,
++	nvcfg.priv = mcu,
++
++	ndev = devm_nvmem_register(&pdev->dev, &nvcfg);
++	if (IS_ERR(ndev))
++		return PTR_ERR(ndev);
++
++	return 0;
++}
++
++static struct platform_driver qnap_mcu_eeprom_driver = {
++	.probe = qnap_mcu_eeprom_probe,
++	.driver = {
++		.name = "qnap-mcu-eeprom",
++	},
++};
++module_platform_driver(qnap_mcu_eeprom_driver);
++
++MODULE_AUTHOR("Heiko Stuebner <heiko@sntech.de>");
++MODULE_DESCRIPTION("QNAP MCU EEPROM driver");
++MODULE_LICENSE("GPL");
+-- 
+2.52.0
+
