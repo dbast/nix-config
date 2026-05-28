@@ -30,7 +30,6 @@
         "x86_64-linux"
         "aarch64-linux"
         "aarch64-darwin"
-        "x86_64-darwin"
       ];
 
       perSystem =
@@ -59,7 +58,6 @@
         modules = [
           disko.nixosModules.disko
           ./machines/qnas.nix
-          ./disko/qnas.nix
           home-manager.nixosModules.home-manager
           {
             home-manager.useGlobalPkgs = true;
