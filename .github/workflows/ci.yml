@@ -74,19 +74,51 @@ jobs:
           } | tee -a "$GITHUB_OUTPUT"
       - name: Post dix diff to PR
         if: github.event_name == 'pull_request'
-        uses: thollander/actions-comment-pull-request@24bffb9b452ba05a4f3f77933840a6a841d1b32b # v3.0.1
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          DIX_DIFF: ${{ steps.dix.outputs.diff }}
+          FLAKE_INPUT_DATES: ${{ steps.flake-input-dates.outputs.dates }}
         with:
-          message: |
-            ## NixOS Closure Changes
+          script: |
+            const marker = '<!-- dix-diff -->';
+            const body = [
+              marker,
+              '## NixOS Closure Changes',
+              '',
+              '```',
+              process.env.DIX_DIFF ?? '',
+              '```',
+              '',
+              '## Flake Input Timestamps',
+              '',
+              process.env.FLAKE_INPUT_DATES ?? '',
+            ].join('\n');
 
-            ```
-            ${{ steps.dix.outputs.diff }}
-            ```
+            const { owner, repo } = context.repo;
+            const issue_number = context.payload.pull_request.number;
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner,
+              repo,
+              issue_number,
+              per_page: 100,
+            });
+            const existing = comments.find(comment => comment.body?.includes(marker));
 
-            ## Flake Input Timestamps
-
-            ${{ steps.flake-input-dates.outputs.dates }}
-          comment-tag: dix-diff
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner,
+                repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number,
+                body,
+              });
+            }
       - name: Run integration tests
         run: |
           make test-qnas
