@@ -54,34 +54,49 @@
   # System packages (tools for NAS operation, maintenance, and debugging)
   environment.systemPackages = with pkgs; [
     # keep-sorted start
+    age
     bat
     binutils
     btop
     coreutils
+    cryptsetup
     curl
     cyme
     dix
+    duf
     ethtool
     fd
+    findutils
+    fuc
     git
     gnugrep
     gnumake
     hdparm
     htop
     less
+    lf
     nettools
     nh
+    nvme-cli
     parted
     pciutils
+    powertop
     procps
+    rclone
+    restic
     ripgrep
     rkdeveloptool
     screen
     smartmontools
+    snitch
+    time
     tmux
+    unzip
     vim
     wget
+    witr
     xfsprogs
+    zoxide
     # keep-sorted end
   ];
 
