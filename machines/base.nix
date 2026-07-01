@@ -91,6 +91,7 @@
     snitch
     time
     tmux
+    ttl
     unzip
     vim
     wget
