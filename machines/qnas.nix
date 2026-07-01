@@ -38,7 +38,6 @@
     mdadm
     openssl
     uutils-coreutils
-    yazi
     # keep-sorted end
   ];
 
