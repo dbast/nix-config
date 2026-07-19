@@ -60,6 +60,26 @@
         "type": "github"
       }
     },
+    "nixos-monitoring-lite": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1784016049,
+        "narHash": "sha256-0NnEUtnfn+3v3xojzvGovWsfrb9SwDkXgwm9Kdc0bRU=",
+        "owner": "dbast",
+        "repo": "nixos-monitoring-lite",
+        "rev": "ffbafe966347ab084e5c6ac651c16c9a153a9592",
+        "type": "github"
+      },
+      "original": {
+        "owner": "dbast",
+        "repo": "nixos-monitoring-lite",
+        "type": "github"
+      }
+    },
     "nixpkgs": {
       "locked": {
         "lastModified": 1784280462,
@@ -96,8 +116,30 @@
         "disko": "disko",
         "flake-parts": "flake-parts",
         "home-manager": "home-manager",
+        "nixos-monitoring-lite": "nixos-monitoring-lite",
         "nixpkgs": "nixpkgs",
+        "sops-nix": "sops-nix",
         "treefmt-nix": "treefmt-nix"
+      }
+    },
+    "sops-nix": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1783174389,
+        "narHash": "sha256-aCWC8ngycU7OdJrU2+Je3qf+1a2ykuBvpPhZT/9tXMc=",
+        "owner": "Mic92",
+        "repo": "sops-nix",
+        "rev": "f1406619a3884cd5c47992a70b8b35c9c0fcb4c9",
+        "type": "github"
+      },
+      "original": {
+        "owner": "Mic92",
+        "repo": "sops-nix",
+        "type": "github"
       }
     },
     "treefmt-nix": {

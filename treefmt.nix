@@ -12,6 +12,10 @@
     shfmt.enable = true;
     taplo.enable = true;
     yamlfmt.enable = true;
+    zizmor.enable = true;
   };
-  settings.formatter = { };
+  settings.formatter.zizmor.options = [
+    "--persona=auditor"
+    "--fix=safe"
+  ];
 }
