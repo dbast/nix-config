@@ -8,6 +8,10 @@
     treefmt-nix.inputs.nixpkgs.follows = "nixpkgs";
     home-manager.url = "github:nix-community/home-manager/release-26.05";
     home-manager.inputs.nixpkgs.follows = "nixpkgs";
+    nixos-monitoring-lite.url = "github:dbast/nixos-monitoring-lite";
+    nixos-monitoring-lite.inputs.nixpkgs.follows = "nixpkgs";
+    sops-nix.url = "github:Mic92/sops-nix";
+    sops-nix.inputs.nixpkgs.follows = "nixpkgs";
     # renovate: datasource=github-tags depName=nix-community/disko versioning=semver extractVersion=^v(?<version>.*)$
     disko.url = "github:nix-community/disko/v1.13.0";
     disko.inputs.nixpkgs.follows = "nixpkgs";
@@ -21,6 +25,8 @@
       treefmt-nix,
       home-manager,
       disko,
+      nixos-monitoring-lite,
+      sops-nix,
       ...
     }:
     flake-parts.lib.mkFlake { inherit inputs; } {
@@ -34,6 +40,20 @@
 
       perSystem =
         { pkgs, system, ... }:
+        let
+          qnasTest = import ./tests/qnas-integration-test.nix {
+            inputs = {
+              inherit
+                disko
+                home-manager
+                nixos-monitoring-lite
+                nixpkgs
+                sops-nix
+                ;
+            };
+            inherit system;
+          };
+        in
         {
           treefmt = import ./treefmt.nix;
 
@@ -43,10 +63,8 @@
           // (
             if pkgs.stdenv.hostPlatform.isLinux then
               {
-                qnas-test = import ./tests/qnas-integration-test.nix {
-                  inputs = { inherit nixpkgs home-manager disko; };
-                  inherit system;
-                };
+                qnas-test = qnasTest;
+                qnas-test-driver = qnasTest.driver;
               }
             else
               { }
@@ -57,6 +75,8 @@
         system = "aarch64-linux";
         modules = [
           disko.nixosModules.disko
+          nixos-monitoring-lite.nixosModules.canary
+          sops-nix.nixosModules.sops
           ./machines/qnas.nix
           home-manager.nixosModules.home-manager
           {

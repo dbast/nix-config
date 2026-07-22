@@ -6,11 +6,17 @@ on:
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: true
+permissions: {}
 jobs:
   check:
+    name: Check
     runs-on: ubuntu-24.04
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
       - name: Inspect
         run: |
           lscpu
@@ -21,14 +27,16 @@ jobs:
       - run: |
           nix fmt -- --ci
   test:
+    name: Test
     runs-on: ubuntu-24.04-arm
     permissions:
       contents: read
-      pull-requests: write
+      pull-requests: write # Post closure diff comments on pull requests.
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           fetch-depth: 0
+          persist-credentials: false
       - name: Inspect
         run: |
           lscpu
@@ -40,7 +48,7 @@ jobs:
       - uses: cachix/cachix-action@5f2d7c5294214f71b873db4b969586b980625e71 # v17
         with:
           name: ts433
-          authToken: "${{ secrets.CACHIX_AUTH_TOKEN }}"
+          authToken: "${{ secrets.CACHIX_AUTH_TOKEN }}" # zizmor: ignore[secrets-outside-env] internal branches may write to the cache
       - name: Build qnas system
         run: |
           nix build .#nixosConfigurations.qnas.config.system.build.toplevel -o result-current
@@ -120,5 +128,18 @@ jobs:
               });
             }
       - name: Run integration tests
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository
         run: |
           make test-qnas
+      - name: Run canary end-to-end test
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }} # zizmor: ignore[secrets-outside-env] internal branches run the canary E2E test
+        run: |
+          test -n "$SOPS_AGE_KEY"
+          key_file="$(mktemp)"
+          trap 'rm -f "$key_file"' EXIT
+          printf '%s\n' "$SOPS_AGE_KEY" > "$key_file"
+          chmod 600 "$key_file"
+          unset SOPS_AGE_KEY
+          SOPS_AGE_KEY_FILE="$key_file" make test-qnas-e2e
