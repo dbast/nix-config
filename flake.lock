@@ -67,11 +67,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1784016049,
-        "narHash": "sha256-0NnEUtnfn+3v3xojzvGovWsfrb9SwDkXgwm9Kdc0bRU=",
+        "lastModified": 1784731662,
+        "narHash": "sha256-JVAYzFeRBmJWhEhLiuFfzcvcemhJfOnQri1PsKD8IlE=",
         "owner": "dbast",
         "repo": "nixos-monitoring-lite",
-        "rev": "ffbafe966347ab084e5c6ac651c16c9a153a9592",
+        "rev": "192a22fec4aa357bcd660eb6d42997615c92c0d3",
         "type": "github"
       },
       "original": {
