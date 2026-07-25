@@ -67,11 +67,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1784731662,
-        "narHash": "sha256-JVAYzFeRBmJWhEhLiuFfzcvcemhJfOnQri1PsKD8IlE=",
+        "lastModified": 1784838195,
+        "narHash": "sha256-FUBp2wzjgH7T61JJr1WUPcVFNglDm74oB0CYy8y/ZQI=",
         "owner": "dbast",
         "repo": "nixos-monitoring-lite",
-        "rev": "192a22fec4aa357bcd660eb6d42997615c92c0d3",
+        "rev": "93b954ded23e2b0f9ed07a52077eaf9064925c59",
         "type": "github"
       },
       "original": {
@@ -82,11 +82,11 @@
     },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1784432872,
-        "narHash": "sha256-n3gKTBIV4ZA5VQpUakffBe3KGu4+mhPoA34rrqS0GkA=",
+        "lastModified": 1784856561,
+        "narHash": "sha256-J+Bx1Z6Oeoj2FgnBhRMKyUhhtDoOpTgXYaVLZpDjW4A=",
         "owner": "nixos",
         "repo": "nixpkgs",
-        "rev": "fd1462031fdee08f65fd0b4c6b64e22239a77870",
+        "rev": "597283ad8aa0b331c788e97c4c262d58877074ef",
         "type": "github"
       },
       "original": {
