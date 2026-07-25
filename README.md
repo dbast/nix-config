@@ -1,3 +1,8 @@
+![NixOS update](https://img.shields.io/github/last-commit/NixOS/nixpkgs/nixos-26.05?label=NixOS%20update)
+![last lock](https://img.shields.io/github/last-commit/dbast/nix-config/main?path=flake.lock&label=flake.lock%20update)
+[![CI](https://img.shields.io/github/actions/workflow/status/dbast/nix-config/ci.yml?branch=main&label=CI)](https://github.com/dbast/nix-config/actions/workflows/ci.yml)
+[![qnas behind](https://img.shields.io/github/commits-difference/dbast/nix-config?base=qnas&head=main&label=qnas%20behind)](https://github.com/dbast/nix-config/compare/qnas...main)
+
 # nix-config
 
 This repository contains a minimal NixOS configuration for a QNAP TS-433 NAS, including the extlinux/U-Boot boot setup, RK3568 kernel module defaults, and disk layout used by the `qnas` machine. It assumes the device is booted with a mainline U-Boot image, such as the one built by [qnap-ts-433-bootloader-builder](https://github.com/dbast/qnap-ts-433-bootloader-builder), and is intentionally TS-433-first until related hardware has been tested.
