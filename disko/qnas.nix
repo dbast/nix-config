@@ -1,4 +1,4 @@
-_:
+args:
 
 {
   disko.devices = {
@@ -28,7 +28,7 @@ _:
     };
 
     disk.main = {
-      device = "/dev/sda";
+      device = args.mainDevice or "/dev/disk/by-id/override-required";
       type = "disk";
       content = {
         type = "gpt";
