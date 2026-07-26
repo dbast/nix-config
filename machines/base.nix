@@ -1,10 +1,14 @@
 { pkgs, lib, ... }:
 
+let
+  username = "daniel";
+in
 {
   networking.networkmanager.enable = false;
 
   time.timeZone = "Europe/Berlin";
 
+  # Mount /tmp as tmpfs
   boot.tmp = {
     useTmpfs = true;
     tmpfsSize = "50%";
@@ -19,7 +23,7 @@
     openFirewall = true;
   };
 
-  users.users.daniel = {
+  users.users.${username} = {
     isNormalUser = true;
     extraGroups = [
       "wheel"
@@ -31,12 +35,13 @@
 
   users.groups.data = { };
 
-  home-manager.users.daniel = _: {
-    programs.zsh.enable = true;
-    programs.fzf.enable = true;
-    programs.eza.enable = true;
+  home-manager = {
+    useGlobalPkgs = true;
+    useUserPackages = true;
+    users.${username}.imports = [ ../users/hm-generic.nix ];
   };
 
+  # Allow unfree packages (if needed for your hardware/tools)
   nixpkgs.config.allowUnfree = true;
   nix.settings.experimental-features = [
     "nix-command"
@@ -68,6 +73,7 @@
     fd
     findutils
     fuc
+    ghostty.terminfo
     git
     gnugrep
     gnumake
@@ -107,11 +113,11 @@
   # Nix-ld for running foreign binaries
   programs.nix-ld.enable = true;
 
-  # Enable passwordless sudo for daniel
+  # Enable passwordless sudo for the primary user
   security.sudo-rs = {
     enable = true;
     extraConfig = ''
-      daniel ALL=(ALL) NOPASSWD: ALL
+      ${username} ALL=(ALL) NOPASSWD: ALL
     '';
   };
 }
