@@ -50,7 +50,7 @@ args:
           };
 
           root = {
-            size = "64G";
+            size = "512G";
             content = {
               type = "filesystem";
               format = "xfs";

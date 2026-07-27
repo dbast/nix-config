@@ -80,15 +80,9 @@
           ./machines/qnas.nix
           home-manager.nixosModules.home-manager
           {
-            home-manager.useGlobalPkgs = true;
-            home-manager.useUserPackages = true;
-            home-manager.users.daniel = import ./users/daniel/home-manager.nix;
-          }
-          {
             system.configurationRevision = self.sourceInfo.rev or null;
           }
         ];
-        specialArgs = { inherit home-manager; };
       };
     };
 }

@@ -12,11 +12,6 @@
         inputs.home-manager.nixosModules.home-manager
         inputs.nixos-monitoring-lite.nixosModules.canary
         inputs.sops-nix.nixosModules.sops
-        {
-          home-manager.useGlobalPkgs = true;
-          home-manager.useUserPackages = true;
-          home-manager.users.daniel = import ./../users/daniel/home-manager.nix;
-        }
       ];
 
       disko.devices.disk.main.device = "/dev/vda";
