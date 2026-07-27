@@ -26,7 +26,6 @@
   services.monitoringLite.canary = {
     enable = true;
     urlFile = config.sops.secrets.healthchecks-canary-url.path;
-    proxy = "socks5h://127.0.0.1:9050";
     disks = [
       "/"
       "/data"
@@ -42,6 +41,8 @@
     };
     settings.ClientOnly = true;
   };
+
+  systemd.services.monitoring-lite-canary.environment.all_proxy = "socks5h://127.0.0.1:9050";
 
   services.udev.extraRules =
     let
