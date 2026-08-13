@@ -21,7 +21,7 @@ jobs:
         run: |
           lscpu
           df -h
-      - uses: cachix/install-nix-action@630ae543ea3a38a9a4166f03376c02c50f408342 # v31.11.0
+      - uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24 # v31.11.1
       - run: |
           make check
       - run: |
@@ -41,7 +41,7 @@ jobs:
         run: |
           lscpu
           df -h
-      - uses: cachix/install-nix-action@630ae543ea3a38a9a4166f03376c02c50f408342 # v31.11.0
+      - uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24 # v31.11.1
         with:
           enable_kvm: true
           extra_nix_config: "system-features = nixos-test benchmark big-parallel kvm"
