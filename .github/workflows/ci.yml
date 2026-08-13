@@ -23,6 +23,8 @@ jobs:
           df -h
       - uses: cachix/install-nix-action@630ae543ea3a38a9a4166f03376c02c50f408342 # v31.11.0
       - run: |
+          python3 .github/scripts/vulnerability_diff.py --self-test
+      - run: |
           make check
       - run: |
           nix fmt -- --ci
@@ -31,7 +33,7 @@ jobs:
     runs-on: ubuntu-24.04-arm
     permissions:
       contents: read
-      pull-requests: write # Post closure diff comments on pull requests.
+      pull-requests: write # Post closure and vulnerability diff comments on pull requests.
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -52,21 +54,72 @@ jobs:
       - name: Build qnas system
         run: |
           nix build .#nixosConfigurations.qnas.config.system.build.toplevel -o result-current
-      - name: Build base system for comparison
+      - name: Build target system for comparison
         if: github.event_name == 'pull_request'
+        env:
+          TARGET_SHA: ${{ github.event.pull_request.base.sha }}
         run: |
-          mkdir -p /tmp/nix-config-main
-          git archive origin/main | tar -x -C /tmp/nix-config-main
-          nix build /tmp/nix-config-main#nixosConfigurations.qnas.config.system.build.toplevel -o result-main
+          mkdir -p /tmp/nix-config-target
+          git archive "$TARGET_SHA" | tar -x -C /tmp/nix-config-target
+          nix build /tmp/nix-config-target#nixosConfigurations.qnas.config.system.build.toplevel -o result-target
       - name: Generate closure diff with dix
         id: dix
         if: github.event_name == 'pull_request'
         run: |
           {
             echo "diff<<EOF"
-            nix run .#dix result-main result-current 2>/dev/null || echo "Error: dix command failed"
+            nix run .#dix result-target result-current 2>/dev/null || echo "Error: dix command failed"
             echo "EOF"
           } | tee -a "$GITHUB_OUTPUT"
+      - name: Scan target and current systems for vulnerabilities
+        if: github.event_name == 'pull_request'
+        env:
+          # renovate: datasource=github-tags depName=tiiuae/sbomnix
+          SBOMNIX_VERSION: v1.8.0
+        run: |
+          touch vulns-target.csv vulns-current.csv
+          nix run "github:tiiuae/sbomnix/$SBOMNIX_VERSION#vulnxscan" -- result-target --out vulns-target.csv
+          nix run "github:tiiuae/sbomnix/$SBOMNIX_VERSION#vulnxscan" -- result-current --out vulns-current.csv
+      - name: Generate vulnerability diff
+        id: vulnerability-diff
+        if: github.event_name == 'pull_request'
+        run: |
+          {
+            echo "diff<<EOF"
+            python3 .github/scripts/vulnerability_diff.py vulns-target.csv vulns-current.csv
+            echo "EOF"
+          } | tee -a "$GITHUB_OUTPUT"
+      - name: Restore latest main vulnerability report
+        id: main-vulnerability-report
+        if: github.event_name == 'pull_request'
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: main-vulnerability-baseline
+          key: main-vulnerability-baseline-${{ github.run_id }}
+          restore-keys: main-vulnerability-baseline-
+      - name: Compare with latest main vulnerability report
+        id: main-vulnerability-diff
+        if: github.event_name == 'pull_request'
+        run: |
+          {
+            echo "diff<<EOF"
+            if [ -f main-vulnerability-baseline/vulns-main.csv ]; then
+              python3 .github/scripts/vulnerability_diff.py main-vulnerability-baseline/vulns-main.csv vulns-current.csv
+            else
+              echo "No scheduled main scan is available yet."
+            fi
+            echo "EOF"
+          } | tee -a "$GITHUB_OUTPUT"
+      - name: Upload vulnerability reports
+        id: vulnerability-reports
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: vulnerability-reports
+          path: |
+            vulns-target.csv
+            vulns-current.csv
+            main-vulnerability-baseline/vulns-main.csv
       - name: Collect flake input timestamps
         id: flake-input-dates
         if: github.event_name == 'pull_request'
@@ -80,12 +133,15 @@ jobs:
             done
             echo "EOF"
           } | tee -a "$GITHUB_OUTPUT"
-      - name: Post dix diff to PR
+      - name: Post comparison report to PR
         if: github.event_name == 'pull_request'
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         env:
           DIX_DIFF: ${{ steps.dix.outputs.diff }}
           FLAKE_INPUT_DATES: ${{ steps.flake-input-dates.outputs.dates }}
+          VULNERABILITY_DIFF: ${{ steps.vulnerability-diff.outputs.diff }}
+          MAIN_VULNERABILITY_DIFF: ${{ steps.main-vulnerability-diff.outputs.diff }}
+          VULNERABILITY_REPORTS_URL: ${{ steps.vulnerability-reports.outputs.artifact-url }}
         with:
           script: |
             const marker = '<!-- dix-diff -->';
@@ -96,6 +152,16 @@ jobs:
               '```',
               process.env.DIX_DIFF ?? '',
               '```',
+              '',
+              '## PR Vulnerability Impact',
+              '',
+              process.env.VULNERABILITY_DIFF || 'No vulnerability changes.',
+              '',
+              '## Since Last Main Scan',
+              '',
+              process.env.MAIN_VULNERABILITY_DIFF || 'No scheduled main scan is available yet.',
+              '',
+              `[Download full CSV reports](${process.env.VULNERABILITY_REPORTS_URL}).`,
               '',
               '## Flake Input Timestamps',
               '',
