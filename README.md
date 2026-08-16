@@ -1,7 +1,6 @@
 ![NixOS update](https://img.shields.io/github/last-commit/NixOS/nixpkgs/nixos-26.05?label=NixOS%20update)
 ![last lock](https://img.shields.io/github/last-commit/dbast/nix-config/main?path=flake.lock&label=flake.lock%20update)
 [![CI](https://img.shields.io/github/actions/workflow/status/dbast/nix-config/ci.yml?branch=main&label=CI)](https://github.com/dbast/nix-config/actions/workflows/ci.yml)
-[![qnas behind](https://img.shields.io/github/commits-difference/dbast/nix-config?base=qnas&head=main&label=qnas%20behind)](https://github.com/dbast/nix-config/compare/qnas...main)
 
 # nix-config
 
