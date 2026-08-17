@@ -55,7 +55,7 @@ jobs:
           nix build .#nixosConfigurations.qnas.config.system.build.toplevel -o result-current
       - name: Scan qnas system
         run: |
-          nix run github:dbast/sbomnix/8fd57d13654821c3ef4780984dee4b2028aa60a6#vulnxscan -- "$PWD/result-current" --format sarif --sarif-location machines/qnas.nix
+          nix run github:dbast/sbomnix/854215e35ed345f098b8ce54e2561ea6c6306f64#vulnxscan -- "$PWD/result-current" --format sarif --sarif-location machines/qnas.nix
       - name: Upload SARIF
         if: always()
         uses: github/codeql-action/upload-sarif@ff2f1c621b7f889edc0d3c761ac2e6a3f8cdb0dd # v4.37.7
@@ -80,16 +80,7 @@ jobs:
       - name: Collect flake input timestamps
         id: flake-input-dates
         if: github.event_name == 'pull_request'
-        run: |
-          {
-            echo "dates<<EOF"
-            echo '| Input | Epoch | ISO UTC |'
-            echo '| --- | ---: | --- |'
-            jq -r '.nodes | to_entries[] | select(.value.locked.lastModified != null) | "\(.key)\t\(.value.locked.lastModified)"' flake.lock | while IFS=$'\t' read -r key ts; do
-              printf '| %s | %s | %s |\n' "$key" "$ts" "$(date -u -d "@$ts" +"%Y-%m-%dT%H:%M:%SZ")"
-            done
-            echo "EOF"
-          } | tee -a "$GITHUB_OUTPUT"
+        uses: ./.github/actions/timestamp-compare
       - name: Post dix diff to PR
         if: github.event_name == 'pull_request'
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
