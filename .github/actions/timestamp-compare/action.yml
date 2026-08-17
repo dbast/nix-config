@@ -1,0 +1,49 @@
+name: Compare flake input timestamps
+description: Compare flake input timestamps between main and the current checkout
+inputs:
+  main-lock:
+    description: Path to the flake.lock from main
+    default: /tmp/nix-config-main/flake.lock
+  current-lock:
+    description: Path to the current flake.lock
+    default: flake.lock
+outputs:
+  dates:
+    description: Markdown comparison table
+    value: ${{ steps.compare.outputs.dates }}
+runs:
+  using: composite
+  steps:
+    - id: compare
+      shell: bash
+      env:
+        MAIN_LOCK: ${{ inputs.main-lock }}
+        CURRENT_LOCK: ${{ inputs.current-lock }}
+      run: |
+        node <<'EOF'
+        const { appendFileSync, readFileSync } = require('node:fs');
+
+        const timestamps = path => Object.fromEntries(
+          Object.entries(JSON.parse(readFileSync(path, 'utf8')).nodes)
+            .map(([name, node]) => [name, node.locked?.lastModified])
+            .filter(([, timestamp]) => timestamp != null),
+        );
+        const format = timestamp => timestamp == null
+          ? '-'
+          : new Date(timestamp * 1000).toISOString().replace('.000Z', 'Z');
+        const main = timestamps(process.env.MAIN_LOCK);
+        const current = timestamps(process.env.CURRENT_LOCK);
+        const names = [...new Set([...Object.keys(main), ...Object.keys(current)])].sort();
+        const rows = names.map(name => {
+          const currentDate = format(current[name]);
+          const displayedCurrent = main[name] === current[name] ? currentDate : `**${currentDate}**`;
+          return `| ${name.replaceAll('|', '\\|')} | ${format(main[name])} | ${displayedCurrent} |`;
+        });
+        const table = [
+          '| What | Main | Current |',
+          '| --- | --- | --- |',
+          ...rows,
+        ].join('\n');
+
+        appendFileSync(process.env.GITHUB_OUTPUT, `dates<<EOF\n${table}\nEOF\n`);
+        EOF
