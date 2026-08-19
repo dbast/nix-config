@@ -55,7 +55,8 @@ jobs:
           nix build .#nixosConfigurations.qnas.config.system.build.toplevel -o result-current
       - name: Scan qnas system
         run: |
-          nix run github:dbast/sbomnix/854215e35ed345f098b8ce54e2561ea6c6306f64#vulnxscan -- "$PWD/result-current" --format sarif --sarif-location machines/qnas.nix
+          nix run github:dbast/sbomnix/64a8aed12ea0fc509645121434d270b4466c20df#vulnxscan -- \
+            "$PWD/result-current" --require-cpe-dictionary --format sarif --sarif-location machines/qnas.nix
       - name: Upload SARIF
         if: always()
         uses: github/codeql-action/upload-sarif@ff2f1c621b7f889edc0d3c761ac2e6a3f8cdb0dd # v4.37.7
