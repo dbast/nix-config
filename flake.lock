@@ -60,6 +60,27 @@
         "type": "github"
       }
     },
+    "nixos-hardware": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1787949426,
+        "narHash": "sha256-B/0yj19vnvOHQoTUy16iGanqB9Xd/Rmi4nSj4HzaD48=",
+        "owner": "dbast",
+        "repo": "nixos-hardware",
+        "rev": "08be451c2760e3a1e73d114b642e96fad8a495ad",
+        "type": "github"
+      },
+      "original": {
+        "owner": "dbast",
+        "ref": "qnap-ts-x33",
+        "repo": "nixos-hardware",
+        "type": "github"
+      }
+    },
     "nixos-monitoring-lite": {
       "inputs": {
         "nixpkgs": [
@@ -116,6 +137,7 @@
         "disko": "disko",
         "flake-parts": "flake-parts",
         "home-manager": "home-manager",
+        "nixos-hardware": "nixos-hardware",
         "nixos-monitoring-lite": "nixos-monitoring-lite",
         "nixpkgs": "nixpkgs",
         "sops-nix": "sops-nix",
