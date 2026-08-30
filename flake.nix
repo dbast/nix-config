@@ -1,5 +1,5 @@
 {
-  description = "NixOS configurations for various systems including QNAP TS-433";
+  description = "NixOS configurations for QNAP TS-233 and TS-433";
 
   inputs = {
     flake-parts.url = "github:hercules-ci/flake-parts";
@@ -83,6 +83,19 @@
           nixos-monitoring-lite.nixosModules.canary
           sops-nix.nixosModules.sops
           ./machines/qnas.nix
+          home-manager.nixosModules.home-manager
+          {
+            system.configurationRevision = self.sourceInfo.rev or null;
+          }
+        ];
+      };
+
+      flake.nixosConfigurations.rnas = nixpkgs.lib.nixosSystem {
+        system = "aarch64-linux";
+        modules = [
+          disko.nixosModules.disko
+          nixos-hardware.nixosModules.qnap-ts-233
+          ./machines/rnas.nix
           home-manager.nixosModules.home-manager
           {
             system.configurationRevision = self.sourceInfo.rev or null;

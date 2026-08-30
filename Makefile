@@ -41,6 +41,16 @@ qnas-install: ## Install NixOS on QNAS
 qnas-switch: ## Apply QNAS configuration
 	sudo nixos-rebuild switch --flake .#qnas
 
+rnas-disko: ## Destroy, format, and mount RNAS disk
+	test -b "$(RNAS_MAIN_DISK)"
+	sudo nix --extra-experimental-features "nix-command flakes" run github:nix-community/disko -- --argstr mainDevice "$(RNAS_MAIN_DISK)" --mode destroy,format,mount ./disko/rnas.nix
+
+rnas-install: ## Install NixOS on RNAS
+	sudo nixos-install --option extra-experimental-features "nix-command flakes" --flake .#rnas
+
+rnas-switch: ## Apply RNAS configuration
+	sudo nixos-rebuild switch --flake .#rnas
+
 switch-nh: ## Apply local NixOS configuration with nh
 	nh os switch .
 

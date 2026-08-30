@@ -38,14 +38,14 @@
 
     machine.wait_for_unit("multi-user.target")
     machine.succeed("uname -a")
-    machine.succeed("id daniel")
+    machine.succeed("id qop")
     machine.wait_for_unit("sshd.service")
     machine.succeed("systemctl status sshd")
     machine.succeed("ip addr show")
     machine.succeed("which zsh")
     machine.succeed("which git")
     machine.succeed("which htop")
-    machine.succeed("su - daniel -c 'echo \$SHELL'")
+    machine.succeed("su - qop -c 'echo \$SHELL'")
     machine.succeed("mount | grep -E '(ext4)'")
     machine.succeed("df -h /")
 

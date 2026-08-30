@@ -1,7 +1,7 @@
 { pkgs, lib, ... }:
 
 let
-  username = "daniel";
+  username = "qop";
 in
 {
   networking.networkmanager.enable = false;
