@@ -33,7 +33,7 @@ update: ## Update flake inputs
 
 qnas-disko: ## Destroy, format, and mount QNAS disks
 	test -b "$(QNAS_MAIN_DISK)"
-	sudo nix --extra-experimental-features "nix-command flakes" run github:nix-community/disko -- --argstr mainDevice "$(QNAS_MAIN_DISK)" --mode destroy,format,mount ./disko/qnas.nix
+	nix-shell -p disko --run 'sudo "$$(command -v disko)" --argstr mainDevice "$(QNAS_MAIN_DISK)" --mode destroy,format,mount ./disko/qnas.nix'
 
 qnas-install: ## Install NixOS on QNAS
 	sudo nixos-install --option extra-experimental-features "nix-command flakes" --flake .#qnas
@@ -43,7 +43,7 @@ qnas-switch: ## Apply QNAS configuration
 
 rnas-disko: ## Destroy, format, and mount RNAS disk
 	test -b "$(RNAS_MAIN_DISK)"
-	sudo nix --extra-experimental-features "nix-command flakes" run github:nix-community/disko -- --argstr mainDevice "$(RNAS_MAIN_DISK)" --mode destroy,format,mount ./disko/rnas.nix
+	nix-shell -p disko --run 'sudo "$$(command -v disko)" --argstr mainDevice "$(RNAS_MAIN_DISK)" --mode destroy,format,mount ./disko/rnas.nix'
 
 rnas-install: ## Install NixOS on RNAS
 	sudo nixos-install --option extra-experimental-features "nix-command flakes" --flake .#rnas
