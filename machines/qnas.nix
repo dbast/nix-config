@@ -8,10 +8,12 @@
 {
   imports = [
     ./base.nix
-    ./hardware/ts-433.nix
     ../disko/qnas.nix
   ];
   networking.hostName = "qnas";
+
+  boot.loader.generic-extlinux-compatible.configurationLimit = 5;
+  hardware.deviceTree.name = "rockchip/rk3568-qnap-ts433-pcb-12-10.dtb";
 
   sops = {
     defaultSopsFile = ../secrets/qnas.yaml;

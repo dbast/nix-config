@@ -10,6 +10,7 @@
         ./../machines/qnas.nix
         inputs.disko.nixosModules.disko
         inputs.home-manager.nixosModules.home-manager
+        inputs.nixos-hardware.nixosModules.qnap-ts-433
         inputs.nixos-monitoring-lite.nixosModules.canary
         inputs.sops-nix.nixosModules.sops
       ];
