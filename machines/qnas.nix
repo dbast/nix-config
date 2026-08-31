@@ -64,15 +64,6 @@
   environment.systemPackages = with pkgs; [
     # keep-sorted start
     aptly
-    btrfs-progs
-    exfatprogs
-    gnupg
-    iperf
-    lvm2
-    mdadm
-    openssl
-    sops
-    uutils-coreutils
     # keep-sorted end
   ];
 

@@ -63,6 +63,7 @@ in
     bat
     binutils
     btop
+    btrfs-progs
     coreutils
     cryptsetup
     curl
@@ -70,6 +71,7 @@ in
     dix
     duf
     ethtool
+    exfatprogs
     fd
     findutils
     fuc
@@ -77,13 +79,18 @@ in
     git
     gnugrep
     gnumake
+    gnupg
     hdparm
     htop
+    iperf
     less
     lf
+    lvm2
+    mdadm
     nettools
     nh
     nvme-cli
+    openssl
     parted
     pciutils
     powertop
@@ -95,10 +102,12 @@ in
     screen
     smartmontools
     snitch
+    sops
     time
     tmux
     ttl
     unzip
+    uutils-coreutils
     vim
     wget
     witr
