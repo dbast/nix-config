@@ -95,6 +95,8 @@
         modules = [
           disko.nixosModules.disko
           nixos-hardware.nixosModules.qnap-ts-233
+          nixos-monitoring-lite.nixosModules.default
+          sops-nix.nixosModules.sops
           ./machines/rnas.nix
           home-manager.nixosModules.home-manager
           {
