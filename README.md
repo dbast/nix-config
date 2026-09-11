@@ -16,18 +16,20 @@ The [`Makefile`](./Makefile) provides the common build, test, deployment, and se
 
 SOPS encrypts values committed under `secrets/`. sops-nix decrypts production secrets on each machine during activation and writes root-only files under `/run/secrets`. Private age identities must never enter Git or the Nix store.
 
-| Identity | `secrets/qnas.yaml` | `secrets/ci.yaml` | Private identity |
-| --- | --- | --- | --- |
-| Developer | yes | yes | `~/.config/sops/age/keys.txt` |
-| QNAS | yes | no | `/var/lib/sops-nix/key.txt` on QNAS |
-| CI | no | yes | GitHub secret `SOPS_AGE_KEY` |
+| Identity | `secrets/qnas.yaml` | `secrets/rnas.yaml` | `secrets/ci.yaml` | Private identity |
+| --- | --- | --- | --- | --- |
+| Developer | yes | yes | yes | `~/.config/sops/age/keys.txt` |
+| QNAS | yes | no | no | `/var/lib/sops-nix/key.txt` on QNAS |
+| RNAS | no | yes | no | `/var/lib/sops-nix/key.txt` on RNAS |
+| CI | no | no | yes | GitHub secret `SOPS_AGE_KEY` |
 
 All recipients begin with `age1pq1` and use age's hybrid ML-KEM-768 + X25519 construction. Required versions are age 1.3 or newer and SOPS 3.12.1 or newer. Secrets-related Make targets use the developer identity at `~/.config/sops/age/keys.txt`; export `SOPS_AGE_KEY_FILE` when running SOPS directly.
 
-Both encrypted files contain the same key with environment-specific values:
+Encrypted machine files contain environment-specific canary URLs. RNAS also uses one shared alert URL for systemd and SMART failures:
 
 ```yaml
 healthchecks-canary-url: https://hc-ping.com/...
+healthchecks-alert-url: https://hc-ping.com/...
 ```
 
 Never use `sops decrypt --in-place`: it leaves plaintext in the worktree.
@@ -80,7 +82,7 @@ Adding access only needs `.sops.yaml` plus `make secrets-update-keys`. Removing 
 
 1. Remove recipient from `.sops.yaml`.
 1. Run `make secrets-update-keys`.
-1. Rotate affected data key with `sops rotate --in-place secrets/qnas.yaml` or `secrets/ci.yaml`.
+1. Rotate the affected file's data key with `sops rotate --in-place secrets/<file>.yaml`.
 1. If the identity may be compromised, rotate the affected credentials now.
 1. Run `make secrets-check` and commit ciphertext changes.
 
@@ -90,5 +92,6 @@ Periodic data-key rotation uses the same explicit commands:
 
 ```sh
 sops rotate --in-place secrets/qnas.yaml
+sops rotate --in-place secrets/rnas.yaml
 sops rotate --in-place secrets/ci.yaml
 ```

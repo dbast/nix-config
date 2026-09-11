@@ -1,4 +1,5 @@
 {
+  config,
   pkgs,
   lib,
   ...
@@ -14,6 +15,48 @@
   boot.loader.generic-extlinux-compatible.configurationLimit = 5;
   hardware.deviceTree.name = "rockchip/rk3568-qnap-ts233-pcb-12-11.dtb";
   hardware.enableRedistributableFirmware = true;
+
+  sops = {
+    defaultSopsFile = ../secrets/rnas.yaml;
+    age = {
+      keyFile = "/var/lib/sops-nix/key.txt";
+      sshKeyPaths = [ ];
+    };
+    gnupg.sshKeyPaths = [ ];
+    secrets = {
+      healthchecks-alert-url = { };
+      healthchecks-canary-url = { };
+    };
+  };
+
+  services.monitoringLite = {
+    canary = {
+      enable = true;
+      urlFile = config.sops.secrets.healthchecks-canary-url.path;
+      disks = [
+        "/"
+        "/lake"
+      ];
+      extraContext.u-boot-version = {
+        runtimeInputs = [ pkgs.coreutils ];
+        script = ''
+          tr -d '\0' < /proc/device-tree/chosen/u-boot,version
+        '';
+      };
+    };
+    smartd = {
+      enable = true;
+      urlFile = config.sops.secrets.healthchecks-alert-url.path;
+    };
+    systemdFail = {
+      enable = true;
+      urlFile = config.sops.secrets.healthchecks-alert-url.path;
+      services = [
+        "smartd"
+        "sshd"
+      ];
+    };
+  };
 
   fileSystems."/lake" = {
     device = "/dev/disk/by-label/hdd-lake";

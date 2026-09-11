@@ -72,16 +72,21 @@ test-qnas-e2e: ## Run trusted QNAS VM test with real Healthchecks URL
 secrets-edit-qnas: ## Edit QNAS secrets without persistent plaintext
 	sops edit secrets/qnas.yaml
 
+secrets-edit-rnas: ## Edit RNAS secrets without persistent plaintext
+	sops edit secrets/rnas.yaml
+
 secrets-edit-ci: ## Edit CI secrets without persistent plaintext
 	sops edit secrets/ci.yaml
 
 secrets-check: ## Verify secrets are encrypted and developer-decryptable
 	sops filestatus secrets/qnas.yaml
+	sops filestatus secrets/rnas.yaml
 	sops filestatus secrets/ci.yaml
 	sops decrypt secrets/qnas.yaml >/dev/null
+	sops decrypt secrets/rnas.yaml >/dev/null
 	sops decrypt secrets/ci.yaml >/dev/null
 
 secrets-update-keys: ## Sync .sops.yaml recipients while keeping current data keys
-	sops updatekeys secrets/qnas.yaml secrets/ci.yaml
+	sops updatekeys secrets/qnas.yaml secrets/rnas.yaml secrets/ci.yaml
 
 .PHONY: help all $(MAKECMDGOALS)
