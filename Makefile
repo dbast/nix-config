@@ -69,6 +69,9 @@ test-qnas: ## Run sandboxed QNAS VM test without secrets or internet
 test-qnas-e2e: ## Run trusted QNAS VM test with real Healthchecks URL
 	REQUIRE_SOPS_E2E=1 nix run .#packages.aarch64-linux.qnas-test-driver
 
+test-rnas: ## Run sandboxed RNAS VM test without secrets or internet
+	nix build .#packages.aarch64-linux.rnas-test --print-build-logs
+
 secrets-edit-qnas: ## Edit QNAS secrets without persistent plaintext
 	sops edit secrets/qnas.yaml
 

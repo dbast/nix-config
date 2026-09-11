@@ -45,17 +45,10 @@
         { pkgs, system, ... }:
         let
           qnasTest = import ./tests/qnas-integration-test.nix {
-            inputs = {
-              inherit
-                disko
-                home-manager
-                nixos-hardware
-                nixos-monitoring-lite
-                nixpkgs
-                sops-nix
-                ;
-            };
-            inherit system;
+            inherit inputs system;
+          };
+          rnasTest = import ./tests/rnas-integration-test.nix {
+            inherit inputs system;
           };
         in
         {
@@ -69,6 +62,7 @@
               {
                 qnas-test = qnasTest;
                 qnas-test-driver = qnasTest.driver;
+                rnas-test = rnasTest;
               }
             else
               { }
