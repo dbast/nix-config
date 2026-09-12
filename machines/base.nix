@@ -122,11 +122,12 @@ in
   # Nix-ld for running foreign binaries
   programs.nix-ld.enable = true;
 
-  # Enable passwordless sudo for the primary user
+  # Require the root password for the primary user's sudo commands
   security.sudo-rs = {
     enable = true;
     extraConfig = ''
-      ${username} ALL=(ALL) NOPASSWD: ALL
+      Defaults:${username} rootpw
+      ${username} ALL=(ALL) PASSWD: ALL
     '';
   };
 }
