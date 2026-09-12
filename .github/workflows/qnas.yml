@@ -1,6 +1,18 @@
-name: "CI"
+name: "QNAS"
 on:
   pull_request:
+    paths:
+      - .github/workflows/qnas.yml
+      - flake.*
+      - Makefile
+      - machines/base.nix
+      - machines/qnas.nix
+      - disko/qnas.nix
+      - users/**
+      - secrets/qnas.yaml
+      - secrets/ci.yaml
+      - .sops.yaml
+      - tests/qnas-*
   push:
     branches: [main]
 concurrency:
@@ -8,27 +20,12 @@ concurrency:
   cancel-in-progress: true
 permissions: {}
 jobs:
-  check:
-    name: Check
-    runs-on: ubuntu-24.04
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - name: Inspect
-        run: |
-          lscpu
-          df -h
-      - uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24 # v31.11.1
-      - run: |
-          make check
-      - run: |
-          nix fmt -- --ci
   test:
     name: Test
     runs-on: ubuntu-24.04-arm
+    defaults:
+      run:
+        shell: bash
     permissions:
       contents: read
       pull-requests: write # Post closure diff comments on pull requests.
@@ -67,33 +64,30 @@ jobs:
           category: vulnxscan
       - name: Build base system for comparison
         if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: |
-          mkdir -p /tmp/nix-config-main
-          git archive origin/main | tar -x -C /tmp/nix-config-main
-          nix build /tmp/nix-config-main#nixosConfigurations.qnas.config.system.build.toplevel -o result-main
+          mkdir -p /tmp/nix-config-base
+          git archive "$BASE_SHA" | tar -x -C /tmp/nix-config-base
+          nix build /tmp/nix-config-base#nixosConfigurations.qnas.config.system.build.toplevel -o result-base
       - name: Generate closure diff with dix
         id: dix
         if: github.event_name == 'pull_request'
         run: |
           {
             echo "diff<<EOF"
-            nix run .#dix result-main result-current 2>/dev/null || echo "Error: dix command failed"
+            nix run .#dix result-base result-current
             echo "EOF"
           } | tee -a "$GITHUB_OUTPUT"
-      - name: Collect flake input timestamps
-        id: flake-input-dates
-        if: github.event_name == 'pull_request'
-        uses: ./.github/actions/timestamp-compare
-      - name: Post changes to PR
-        if: github.event_name == 'pull_request'
+      - name: Post QNAS changes to PR
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         env:
           DIX_DIFF: ${{ steps.dix.outputs.diff }}
-          FLAKE_INPUT_DATES: ${{ steps.flake-input-dates.outputs.dates }}
         with:
           script: |
             const fs = require('fs');
-            const marker = '<!-- dix-diff -->';
+            const marker = '<!-- dix-diff-qnas -->';
             const { owner, repo } = context.repo;
             const baseRef = `refs/heads/${context.payload.pull_request.base.ref}`;
             const { data: analyses } = await github.request(
@@ -160,17 +154,13 @@ jobs:
               : `No finding additions, resolutions, or detail changes (${current.size} current${carriedNote}).`;
             const body = [
               marker,
-              '## NixOS Closure Changes',
+              '## QNAS Closure Changes',
               '',
               '```',
               process.env.DIX_DIFF ?? '',
               '```',
               '',
-              '## Flake Input Timestamps',
-              '',
-              process.env.FLAKE_INPUT_DATES ?? '',
-              '',
-              '## Vulnerability Changes',
+              '## QNAS Vulnerability Changes',
               '',
               vulnerabilityDiff,
             ].join('\n');
@@ -182,7 +172,9 @@ jobs:
               issue_number,
               per_page: 100,
             });
-            const existing = comments.find(comment => comment.body?.includes(marker));
+            const existing = comments.find(comment =>
+              comment.user?.login === 'github-actions[bot]' &&
+              (comment.body?.includes(marker) || comment.body?.includes('<!-- dix-diff -->')));
 
             if (existing) {
               await github.rest.issues.updateComment({

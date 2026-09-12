@@ -1,0 +1,106 @@
+name: "RNAS"
+on:
+  pull_request:
+    paths:
+      - .github/workflows/rnas.yml
+      - flake.*
+      - Makefile
+      - machines/base.nix
+      - machines/rnas.nix
+      - disko/rnas.nix
+      - users/**
+      - secrets/rnas.yaml
+      - .sops.yaml
+      - tests/rnas-*
+  push:
+    branches: [main]
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
+permissions: {}
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-24.04-arm
+    defaults:
+      run:
+        shell: bash
+    permissions:
+      contents: read
+      pull-requests: write # Post closure diff comments on pull requests.
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Inspect
+        run: |
+          lscpu
+          df -h
+      - uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24 # v31.11.1
+        with:
+          enable_kvm: true
+          extra_nix_config: "system-features = nixos-test benchmark big-parallel kvm"
+      - uses: cachix/cachix-action@38b082610b782e7e93e209c35fd730d399dee866 # v17
+        with:
+          name: ts433
+          authToken: "${{ secrets.CACHIX_AUTH_TOKEN }}" # zizmor: ignore[secrets-outside-env] internal branches may write to the cache
+      - name: Build rnas system
+        run: |
+          nix build .#nixosConfigurations.rnas.config.system.build.toplevel -o result-current
+      - name: Build base system for comparison
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          mkdir -p /tmp/nix-config-base
+          git archive "$BASE_SHA" | tar -x -C /tmp/nix-config-base
+          nix build /tmp/nix-config-base#nixosConfigurations.rnas.config.system.build.toplevel -o result-base
+      - name: Generate closure diff with dix
+        id: dix
+        if: github.event_name == 'pull_request'
+        run: |
+          {
+            echo "diff<<EOF"
+            nix run .#dix result-base result-current
+            echo "EOF"
+          } | tee -a "$GITHUB_OUTPUT"
+      - name: Post RNAS changes to PR
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          DIX_DIFF: ${{ steps.dix.outputs.diff }}
+        with:
+          script: |
+            const marker = '<!-- dix-diff-rnas -->';
+            const { owner, repo } = context.repo;
+            const issue_number = context.payload.pull_request.number;
+            const body = [
+              marker,
+              '## RNAS Closure Changes',
+              '',
+              '```',
+              process.env.DIX_DIFF ?? '',
+              '```',
+            ].join('\n');
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner,
+              repo,
+              issue_number,
+              per_page: 100,
+            });
+            const existing = comments.find(comment =>
+              comment.user?.login === 'github-actions[bot]' && comment.body?.includes(marker));
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner,
+                repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({ owner, repo, issue_number, body });
+            }
+      - name: Run integration tests
+        run: |
+          make test-rnas
