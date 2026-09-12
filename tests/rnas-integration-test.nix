@@ -37,6 +37,9 @@
     };
 
   testScript = ''
+    import json
+    import shlex
+
     machine.wait_for_unit("multi-user.target")
     machine.wait_for_unit("sshd.service")
     machine.succeed("test $(hostname) = rnas")
@@ -44,5 +47,41 @@
     machine.succeed("su - qop -c 'command -v zsh && command -v git'")
     machine.succeed("mountpoint /lake")
     machine.succeed("test -w /lake")
+
+    machine.wait_for_unit("syncthing.service")
+    machine.succeed("test -d /data && ! mountpoint -q /data")
+    machine.succeed("su -s /bin/sh syncthing -c 'test -w /data/shared'")
+    machine.succeed("su - qop -c 'test -w /data/shared'")
+    cli = "syncthing cli --home=/data/syncthing/.config/syncthing"
+    machine.wait_until_succeeds(f"{cli} config dump-json >/dev/null")
+    config = json.loads(machine.succeed(f"{cli} config dump-json"))
+    assert config["folders"] == [], "Folders should be configured through the Web UI"
+    assert config["gui"]["address"] == "127.0.0.1:8384"
+    assert len(config["devices"]) == 1, "Only the local device should exist"
+
+    # Simulate Web UI folder creation, pairing, and sharing, then restart.
+    machine.succeed(
+        f"{cli} config folders add --id shared --label shared --path /data/shared --ignore-perms"
+    )
+    config = json.loads(machine.succeed(f"{cli} config dump-json"))
+    machine.succeed("syncthing generate --home=/tmp/syncthing-peer")
+    peer = machine.succeed("syncthing device-id --home=/tmp/syncthing-peer").strip()
+    machine.succeed(f"{cli} config devices add --device-id {peer} --name manual-peer")
+    folder = config["folders"][0]
+    folder["devices"].append({"deviceID": peer})
+    payload = shlex.quote(json.dumps(folder))
+    api_key = config["gui"]["apiKey"]
+    machine.succeed(
+        f"curl --fail -H 'X-API-Key: {api_key}' -H 'Content-Type: application/json' "
+        f"-X PUT -d {payload} http://127.0.0.1:8384/rest/config/folders/shared"
+    )
+    machine.succeed("systemctl restart syncthing.service")
+    machine.wait_until_succeeds(f"{cli} config dump-json >/dev/null")
+    config = json.loads(machine.succeed(f"{cli} config dump-json"))
+    assert [folder["id"] for folder in config["folders"]] == ["shared"]
+    assert config["folders"][0]["path"] == "/data/shared"
+    assert config["folders"][0]["ignorePerms"]
+    assert any(device["deviceID"] == peer for device in config["devices"])
+    assert any(device["deviceID"] == peer for device in config["folders"][0]["devices"])
   '';
 }

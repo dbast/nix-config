@@ -52,8 +52,10 @@
       enable = true;
       urlFile = config.sops.secrets.healthchecks-alert-url.path;
       services = [
+        "monitoring-lite-smartd-short-self-test"
         "smartd"
         "sshd"
+        "syncthing"
       ];
     };
   };
@@ -66,6 +68,24 @@
       "logbsize=256k"
       "X-fstrim.notrim"
     ];
+  };
+
+  users.users.syncthing.extraGroups = [ "data" ];
+
+  systemd.tmpfiles.rules = [
+    "d /data 0755 root root -"
+    "d /data/shared 2770 syncthing data -"
+    "d /data/syncthing 0750 syncthing syncthing -"
+  ];
+
+  services.syncthing = {
+    enable = true;
+    dataDir = "/data/syncthing";
+    guiAddress = "127.0.0.1:8384";
+    openDefaultPorts = true;
+    # Manage folders and devices through the Web UI.
+    overrideDevices = false;
+    overrideFolders = false;
   };
 
   services.udev.extraRules =

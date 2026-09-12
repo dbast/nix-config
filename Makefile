@@ -51,6 +51,9 @@ rnas-install: ## Install NixOS on RNAS
 rnas-switch: ## Apply RNAS configuration
 	sudo nixos-rebuild switch --flake .#rnas
 
+rnas-forward: ## Forward Syncthing Web UI to http://127.0.0.1:18384
+	ssh -N -o ExitOnForwardFailure=yes -L 127.0.0.1:18384:127.0.0.1:8384 qop@rnas
+
 switch-nh: ## Apply local NixOS configuration with nh
 	nh os switch .
 
