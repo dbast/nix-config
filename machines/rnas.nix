@@ -12,6 +12,48 @@
   ];
 
   networking.hostName = "rnas";
+  # Temporary collector for intermittent end0 failures; rerun with systemctl start.
+  systemd.services.rnas-network-diagnostics = {
+    description = "Collect RNAS Ethernet evidence in a new persistent run directory";
+    wantedBy = [ "multi-user.target" ];
+    # Broken networking must not prevent collection.
+    after = [ "network.target" ];
+    path = with pkgs; [
+      bash
+      coreutils
+      dhcpcd
+      dtc
+      ethtool
+      iproute2
+      iptables
+      iputils
+      jq
+      kmod
+      nftables
+      procps
+      systemd
+      tcpdump
+      usbutils
+      util-linux
+    ];
+    environment = {
+      LABEL = "unlabelled";
+      SETTLE_SECONDS = "120";
+      TARGET_IPV4 = "";
+    };
+    serviceConfig = {
+      Type = "oneshot";
+      ExecStart = pkgs.writeShellScript "rnas-network-diagnostics" (
+        builtins.readFile ./rnas-network-diagnostics.sh
+      );
+      EnvironmentFile = "-/var/lib/rnas-network-diagnostics/experiment.env";
+      StateDirectory = "rnas-network-diagnostics";
+      StateDirectoryMode = "0700";
+      UMask = "0077";
+      TimeoutStartSec = "10min";
+    };
+  };
+
   boot.loader.generic-extlinux-compatible.configurationLimit = 5;
   hardware.deviceTree.name = "rockchip/rk3568-qnap-ts233-pcb-12-11.dtb";
   hardware.enableRedistributableFirmware = true;
