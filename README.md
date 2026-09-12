@@ -14,6 +14,22 @@ The same setup can potentially also be used for related TSx33 devices by forcing
 
 The [`Makefile`](./Makefile) provides the common build, test, deployment, and secrets operations. Run `make help` for the available targets.
 
+## RNAS SSH over Tor
+
+RNAS exposes SSH through a v3 onion service, forwarding onion port 22 to `127.0.0.1:22`. After deployment, read the generated address on RNAS:
+
+```sh
+sudo cat /var/lib/tor/onion/ssh/hostname
+```
+
+With Tor running on the client at SOCKS port 9050, connect using macOS or OpenBSD `nc`:
+
+```sh
+ssh -o 'ProxyCommand=nc -X 5 -x 127.0.0.1:9050 %h %p' qop@ADDRESS.onion
+```
+
+The onion identity persists in `/var/lib/tor/onion/ssh`; preserve that directory to retain the address across reinstalls. SSH uses the existing authorized keys.
+
 ## Secrets
 
 SOPS encrypts values committed under `secrets/`. sops-nix decrypts production secrets on each machine during activation and writes files under `/run/secrets`, root-only unless a service owner is configured. Private age identities must never enter Git or the Nix store.
