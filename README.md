@@ -16,7 +16,7 @@ The [`Makefile`](./Makefile) provides the common build, test, deployment, and se
 
 ## Secrets
 
-SOPS encrypts values committed under `secrets/`. sops-nix decrypts production secrets on each machine during activation and writes root-only files under `/run/secrets`. Private age identities must never enter Git or the Nix store.
+SOPS encrypts values committed under `secrets/`. sops-nix decrypts production secrets on each machine during activation and writes files under `/run/secrets`, root-only unless a service owner is configured. Private age identities must never enter Git or the Nix store.
 
 | Identity | `secrets/qnas.yaml` | `secrets/rnas.yaml` | `secrets/ci.yaml` | Private identity |
 | --- | --- | --- | --- | --- |
@@ -35,6 +35,12 @@ healthchecks-alert-url: https://hc-ping.com/...
 ```
 
 Never use `sops decrypt --in-place`: it leaves plaintext in the worktree.
+
+### RNAS Restic Server
+
+RNAS serves repositories from `/lake/backup/hosted` on TCP port 8000.
+
+Private repositories are enabled: the first URL directory must match the authenticated username. Clients use `rest:http://rnas:8000/USERNAME/REPOSITORY` with `RESTIC_REST_USERNAME` and `RESTIC_REST_PASSWORD` for server authentication, plus their separate repository encryption password.
 
 ### Generate Keys
 

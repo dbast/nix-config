@@ -26,6 +26,12 @@
     secrets = {
       healthchecks-alert-url = { };
       healthchecks-canary-url = { };
+      restic-rest-server-htpasswd = {
+        owner = "restic";
+        group = "restic";
+        mode = "0400";
+        restartUnits = [ "restic-rest-server.service" ];
+      };
     };
   };
 
@@ -53,6 +59,7 @@
       urlFile = config.sops.secrets.healthchecks-alert-url.path;
       services = [
         "monitoring-lite-smartd-short-self-test"
+        "restic-rest-server"
         "smartd"
         "sshd"
         "syncthing"
@@ -76,7 +83,18 @@
     "d /data 0755 root root -"
     "d /data/shared 2770 syncthing data -"
     "d /data/syncthing 0750 syncthing syncthing -"
+    "d /lake/backup/hosted 0750 restic restic -"
   ];
+
+  services.restic.server = {
+    enable = true;
+    dataDir = "/lake/backup/hosted";
+    privateRepos = true;
+    listenAddress = "0.0.0.0:8000";
+    htpasswd-file = config.sops.secrets.restic-rest-server-htpasswd.path;
+  };
+  systemd.services.restic-rest-server.unitConfig.RequiresMountsFor = [ "/lake" ];
+  networking.firewall.allowedTCPPorts = [ 8000 ];
 
   services.syncthing = {
     enable = true;
