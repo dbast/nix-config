@@ -4,7 +4,7 @@
   name = "rnas-integration-test";
 
   nodes.machine =
-    { lib, ... }:
+    { lib, pkgs, ... }:
     {
       imports = [
         ./../machines/rnas.nix
@@ -19,11 +19,18 @@
       networking.interfaces.eth0.useDHCP = true;
 
       sops.useSystemdActivation = true;
+      sops.validateSopsFiles = false;
       systemd.services.sops-install-secrets = {
         wantedBy = lib.mkForce [ ];
         requiredBy = lib.mkForce [ ];
       };
       systemd.timers.monitoring-lite-canary.wantedBy = lib.mkForce [ ];
+
+      services.restic.server.htpasswd-file = lib.mkForce "/etc/restic-test.htpasswd";
+      environment.etc."restic-test.htpasswd".source = pkgs.runCommand "restic-test.htpasswd" { } ''
+        ${pkgs.apacheHttpd}/bin/htpasswd -bcB "$out" test test-password
+      '';
+      environment.systemPackages = [ pkgs.restic ];
 
       virtualisation = {
         memorySize = 2048;
@@ -47,6 +54,14 @@
     machine.succeed("su - qop -c 'command -v zsh && command -v git'")
     machine.succeed("mountpoint /lake")
     machine.succeed("test -w /lake")
+
+    machine.wait_for_unit("restic-rest-server.service")
+    machine.succeed("su -s /bin/sh restic -c 'test -w /lake/backup/hosted'")
+    assert machine.succeed("curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8000/test/config").strip() == "401"
+    machine.succeed("RESTIC_PASSWORD=test-repository-password restic -r rest:http://test:test-password@127.0.0.1:8000/test init")
+    machine.succeed("test -f /lake/backup/hosted/test/config")
+    machine.fail("RESTIC_PASSWORD=test-repository-password restic -r rest:http://test:test-password@127.0.0.1:8000/other init")
+    machine.succeed("test ! -e /lake/backup/hosted/other")
 
     machine.wait_for_unit("syncthing.service")
     machine.succeed("test -d /data && ! mountpoint -q /data")
