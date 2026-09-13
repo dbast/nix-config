@@ -49,6 +49,28 @@
           tr -d '\0' < /proc/device-tree/chosen/u-boot,version
         '';
       };
+      extraContext.ssh-auth-7d = {
+        runtimeInputs = [
+          pkgs.systemd
+          pkgs.gawk
+        ];
+        script = ''
+          journalctl -u sshd --since "7 days ago" --no-pager -o cat |
+            awk '
+              /^(Accepted|Failed) .* from / {
+                loopback = / from (127\.0\.0\.1|::1) port /
+                if ($1 == "Accepted") {
+                  accepted++; loopback_accepted += loopback
+                } else {
+                  failed++; loopback_failed += loopback
+                }
+              }
+              END {
+                printf "accepted=%d failed=%d loopback_accepted=%d loopback_failed=%d\n", accepted, failed, loopback_accepted, loopback_failed
+              }
+            '
+        '';
+      };
     };
     smartd = {
       enable = true;
@@ -63,6 +85,7 @@
         "smartd"
         "sshd"
         "syncthing"
+        "tor"
       ];
     };
   };
@@ -104,6 +127,22 @@
     # Manage folders and devices through the Web UI.
     overrideDevices = false;
     overrideFolders = false;
+  };
+
+  services.tor = {
+    enable = true;
+    relay.onionServices.ssh = {
+      version = 3;
+      map = [
+        {
+          port = 22;
+          target = {
+            addr = "127.0.0.1";
+            port = 22;
+          };
+        }
+      ];
+    };
   };
 
   services.udev.extraRules =

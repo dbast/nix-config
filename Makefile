@@ -54,6 +54,10 @@ rnas-switch: ## Apply RNAS configuration
 rnas-forward: ## Forward Syncthing Web UI to http://127.0.0.1:18384
 	ssh -N -o ExitOnForwardFailure=yes -L 127.0.0.1:18384:127.0.0.1:8384 qop@rnas
 
+ssh-tor: ## SSH over Tor: make ssh-tor ADDRESS=ADDRESS.onion
+	$(if $(strip $(ADDRESS)),,$(error Usage: make ssh-tor ADDRESS=ADDRESS.onion))
+	ssh -o 'ProxyCommand=nc -X 5 -x 127.0.0.1:9050 %h %p' "qop@$(ADDRESS)"
+
 switch-nh: ## Apply local NixOS configuration with nh
 	nh os switch .
 
