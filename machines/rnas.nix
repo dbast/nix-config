@@ -26,6 +26,7 @@
     secrets = {
       healthchecks-alert-url = { };
       healthchecks-canary-url = { };
+      restic-internal-password = { };
       restic-rest-server-htpasswd = {
         owner = "restic";
         group = "restic";
@@ -47,6 +48,20 @@
         runtimeInputs = [ pkgs.coreutils ];
         script = ''
           tr -d '\0' < /proc/device-tree/chosen/u-boot,version
+        '';
+      };
+      extraContext.restic-internal = {
+        runtimeInputs = [
+          pkgs.systemd
+          pkgs.jq
+        ];
+        script = ''
+          journalctl -u restic-backups-internal --no-pager -o cat |
+            jq -Rnr '
+              reduce (inputs | fromjson? | objects
+                | select(.message_type == "summary") | .snapshot_id | strings)
+                as $id ("unknown"; $id)
+            '
         '';
       };
       extraContext.ssh-auth-7d = {
@@ -75,12 +90,17 @@
     smartd = {
       enable = true;
       urlFile = config.sops.secrets.healthchecks-alert-url.path;
+      shortSelfTest = {
+        enable = true;
+        triggerAfterUnits = [ "restic-backups-internal" ];
+      };
     };
     systemdFail = {
       enable = true;
       urlFile = config.sops.secrets.healthchecks-alert-url.path;
       services = [
         "monitoring-lite-smartd-short-self-test"
+        "restic-backups-internal"
         "restic-rest-server"
         "smartd"
         "sshd"
@@ -105,9 +125,57 @@
   systemd.tmpfiles.rules = [
     "d /data 0755 root root -"
     "d /data/shared 2770 syncthing data -"
+    "d /data/smart 0700 root root -"
     "d /data/syncthing 0750 syncthing syncthing -"
     "d /lake/backup/hosted 0750 restic restic -"
+    "d /lake/backup/internal 0700 root root -"
   ];
+
+  services.restic.backups.internal = {
+    repository = "/lake/backup/internal";
+    passwordFile = config.sops.secrets.restic-internal-password.path;
+    initialize = true;
+    timerConfig = {
+      OnCalendar = "Sun *-*-* 08:00:00";
+      RandomizedDelaySec = "2h";
+      Persistent = true;
+    };
+    paths = [ "/data" ];
+    dynamicFilesFrom = ''
+      ${pkgs.findutils}/bin/find /var/log/journal -type f -name '*@*.journal' -print
+    '';
+    extraBackupArgs = [
+      "--json"
+      "--group-by host"
+    ];
+    pruneOpts = [
+      "--group-by host"
+      "--keep-weekly 4"
+      "--keep-monthly 6"
+      "--keep-yearly 2"
+    ];
+    checkOpts = [ "--with-cache" ];
+    runCheck = true;
+    backupPrepareCommand = ''
+      set -eu
+      umask 077
+      /run/current-system/sw/bin/nixos-version --configuration-revision > /data/nixos-configuration-revision
+      ${pkgs.systemd}/bin/journalctl --sync
+      ${pkgs.systemd}/bin/journalctl --rotate
+    '';
+    backupCleanupCommand = ''
+      # Capture while disks are awake, before the OnSuccess self-test.
+      ts=$(${pkgs.coreutils}/bin/date -u +%Y-%m-%dT%H:%M:%SZ)
+      for d in /dev/disk/by-id/ata-*; do
+        [ -e "$d" ] || continue
+        case "$d" in *-part*) continue ;; esac
+        # smartctl also returns nonzero when its JSON reports disk health problems.
+        ${pkgs.smartmontools}/bin/smartctl --json -x "$d" \
+          > "/data/smart/''${d##*/}_$ts.json" || true
+      done
+    '';
+  };
+  systemd.services.restic-backups-internal.unitConfig.RequiresMountsFor = [ "/lake" ];
 
   services.restic.server = {
     enable = true;

@@ -4,7 +4,12 @@
   name = "rnas-integration-test";
 
   nodes.machine =
-    { lib, pkgs, ... }:
+    {
+      config,
+      lib,
+      pkgs,
+      ...
+    }:
     {
       imports = [
         ./../machines/rnas.nix
@@ -17,6 +22,7 @@
 
       disko.devices.disk.main.device = "/dev/vda";
       networking.interfaces.eth0.useDHCP = true;
+      system.configurationRevision = "1111111111111111111111111111111111111111";
 
       sops.useSystemdActivation = true;
       sops.validateSopsFiles = false;
@@ -30,7 +36,16 @@
       environment.etc."restic-test.htpasswd".source = pkgs.runCommand "restic-test.htpasswd" { } ''
         ${pkgs.apacheHttpd}/bin/htpasswd -bcB "$out" test test-password
       '';
-      environment.systemPackages = [ pkgs.restic ];
+      environment.systemPackages = [
+        pkgs.restic
+        (pkgs.writeShellApplication {
+          name = "restic-canary-evidence";
+          inherit (config.services.monitoringLite.canary.extraContext.restic-internal) runtimeInputs;
+          text = config.services.monitoringLite.canary.extraContext.restic-internal.script;
+        })
+      ];
+      services.restic.backups.internal.passwordFile = lib.mkForce "/run/restic-test-password";
+      systemd.timers.restic-backups-internal.wantedBy = lib.mkForce [ ];
 
       virtualisation = {
         memorySize = 2048;
@@ -45,7 +60,6 @@
 
   testScript = ''
     import json
-    import shlex
 
     machine.wait_for_unit("multi-user.target")
     machine.wait_for_unit("sshd.service")
@@ -74,21 +88,9 @@
     assert config["gui"]["address"] == "127.0.0.1:8384"
     assert len(config["devices"]) == 1, "Only the local device should exist"
 
-    # Simulate Web UI folder creation, pairing, and sharing, then restart.
+    # A folder added interactively must survive a restart.
     machine.succeed(
         f"{cli} config folders add --id shared --label shared --path /data/shared --ignore-perms"
-    )
-    config = json.loads(machine.succeed(f"{cli} config dump-json"))
-    machine.succeed("syncthing generate --home=/tmp/syncthing-peer")
-    peer = machine.succeed("syncthing device-id --home=/tmp/syncthing-peer").strip()
-    machine.succeed(f"{cli} config devices add --device-id {peer} --name manual-peer")
-    folder = config["folders"][0]
-    folder["devices"].append({"deviceID": peer})
-    payload = shlex.quote(json.dumps(folder))
-    api_key = config["gui"]["apiKey"]
-    machine.succeed(
-        f"curl --fail -H 'X-API-Key: {api_key}' -H 'Content-Type: application/json' "
-        f"-X PUT -d {payload} http://127.0.0.1:8384/rest/config/folders/shared"
     )
     machine.succeed("systemctl restart syncthing.service")
     machine.wait_until_succeeds(f"{cli} config dump-json >/dev/null")
@@ -96,7 +98,26 @@
     assert [folder["id"] for folder in config["folders"]] == ["shared"]
     assert config["folders"][0]["path"] == "/data/shared"
     assert config["folders"][0]["ignorePerms"]
-    assert any(device["deviceID"] == peer for device in config["devices"])
-    assert any(device["deviceID"] == peer for device in config["folders"][0]["devices"])
+
+    machine.succeed("systemctl stop syncthing.service")
+    machine.succeed("printf shared-test > /data/shared/backup-test")
+    machine.succeed("printf syncthing-test > /data/syncthing/backup-test")
+    machine.succeed("printf test-only-password > /run/restic-test-password")
+    machine.succeed("printf journal-backup-marker | systemd-cat -t restic-backup-test")
+    machine.succeed("systemctl start restic-backups-internal.service")
+    snapshot_id = machine.succeed("journalctl --sync && restic-canary-evidence").strip()
+    snapshots = json.loads(machine.succeed("restic-internal snapshots --json"))
+    assert snapshot_id == snapshots[-1]["id"]
+    assert len(snapshot_id) == 64
+    machine.succeed("restic-internal restore latest --target /tmp/restore")
+    machine.succeed("cmp /data/shared/backup-test /tmp/restore/data/shared/backup-test")
+    machine.succeed("cmp /data/syncthing/backup-test /tmp/restore/data/syncthing/backup-test")
+    assert machine.succeed("cat /tmp/restore/data/nixos-configuration-revision").strip() == "1111111111111111111111111111111111111111"
+    machine.succeed(
+        "journalctl --directory=/tmp/restore/var/log/journal/$(cat /etc/machine-id) "
+        "-t restic-backup-test --no-pager -o cat | grep -Fx journal-backup-marker"
+    )
+    machine.succeed("test ! -e /tmp/restore/var/log/journal/$(cat /etc/machine-id)/system.journal")
+    machine.succeed("test -d /data/smart")
   '';
 }
