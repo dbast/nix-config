@@ -1,0 +1,7 @@
+# actionlint 1.7.12 (nixos-26.05) predates GitHub-hosted ubuntu-26.04
+# runners (GA 2026-09-17). Declare the labels so the runner-label check
+# accepts them. Remove once nixpkgs ships an actionlint that knows them.
+self-hosted-runner:
+  labels:
+    - ubuntu-26.04
+    - ubuntu-26.04-arm
