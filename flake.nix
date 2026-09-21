@@ -71,6 +71,7 @@
 
       flake.nixosConfigurations.qnas = nixpkgs.lib.nixosSystem {
         system = "aarch64-linux";
+        specialArgs = { inherit inputs; };
         modules = [
           disko.nixosModules.disko
           nixos-hardware.nixosModules.qnap-ts-433
@@ -86,6 +87,7 @@
 
       flake.nixosConfigurations.rnas = nixpkgs.lib.nixosSystem {
         system = "aarch64-linux";
+        specialArgs = { inherit inputs; };
         modules = [
           disko.nixosModules.disko
           nixos-hardware.nixosModules.qnap-ts-233
