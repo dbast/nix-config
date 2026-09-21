@@ -3,6 +3,8 @@
 (import "${inputs.nixpkgs}/nixos/lib/testing-python.nix" { inherit system; }).runTest {
   name = "qnas-integration-test";
 
+  node.specialArgs = { inherit inputs; };
+
   nodes.machine =
     { lib, ... }:
     {

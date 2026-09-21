@@ -1,9 +1,24 @@
-{ pkgs, lib, ... }:
+{
+  pkgs,
+  lib,
+  inputs ? { },
+  ...
+}:
 
 let
   username = "qop";
 in
 {
+  # Store the flake's narHash in /etc so the exact configuration source
+  # is identifiable on the running system via /run/current-system/etc/flake-narHash
+  environment.etc."flake-narHash".text = inputs.self.narHash or "unknown";
+
+  # Include the narHash in the canary heartbeat payload (Context: flake-narHash:...)
+  services.monitoringLite.canary.extraContext.flake-narHash = {
+    runtimeInputs = [ pkgs.coreutils ];
+    script = "cat /etc/flake-narHash";
+  };
+
   networking.networkmanager.enable = false;
 
   time.timeZone = "Europe/Berlin";
