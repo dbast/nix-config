@@ -29,7 +29,7 @@ jobs:
     permissions:
       contents: read
       pull-requests: write # Post closure diff comments on pull requests.
-      security-events: write # Upload vulnxscan SARIF and read accepted analyses.
+      security-events: write # Upload vulnxscan SARIF.
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -54,7 +54,7 @@ jobs:
         env:
           GRYPE_DB_REQUIRE_UPDATE_CHECK: "true"
         run: |
-          nix run github:tiiuae/sbomnix/45168157fdb8a9059e7acbdf9a0f24050669738f#vulnxscan -- \
+          nix run github:tiiuae/sbomnix/cb26545fc542efe420f340dbae7e3ab4ad865746#vulnxscan -- \
             "$PWD/result-current" --require-cpe-dictionary --format sarif --sarif-location machines/qnas.nix
       - name: Upload SARIF
         if: always()
@@ -62,6 +62,34 @@ jobs:
         with:
           sarif_file: vulns.sarif
           category: vulnxscan
+      - name: Restore SARIF baseline
+        id: sarif-baseline
+        if: github.event_name == 'pull_request'
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: baseline/vulns.sarif
+          key: vulnxscan-sarif
+          # Prefix match picks the most recently created entry: the latest
+          # main-branch upload, regardless of which commit produced it.
+          restore-keys: |
+            vulnxscan-sarif-
+      - name: Stage SARIF baseline
+        if: github.event_name == 'push'
+        run: |
+          mkdir -p baseline
+          cp vulns.sarif baseline/vulns.sarif
+      - name: Save SARIF baseline
+        if: github.event_name == 'push'
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: baseline/vulns.sarif
+          key: vulnxscan-sarif-${{ github.sha }}
+      - name: Generate vulnerability diff
+        id: vulns-diff
+        if: github.event_name == 'pull_request' && steps.sarif-baseline.outputs.cache-hit == 'true'
+        run: |
+          nix run github:tiiuae/sbomnix/cb26545fc542efe420f340dbae7e3ab4ad865746#vulnxscan-diff -- \
+            --current vulns.sarif --previous baseline/vulns.sarif --markdown vulns-diff.md
       - name: Build base system for comparison
         if: github.event_name == 'pull_request'
         env:
@@ -84,86 +112,29 @@ jobs:
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         env:
           DIX_DIFF: ${{ steps.dix.outputs.diff }}
+          VULNS_DIFF: ${{ steps.vulns-diff.outcome }}
         with:
           script: |
             const fs = require('fs');
             const marker = '<!-- dix-diff-qnas -->';
             const { owner, repo } = context.repo;
-            const baseRef = `refs/heads/${context.payload.pull_request.base.ref}`;
-            const { data: analyses } = await github.request(
-              'GET /repos/{owner}/{repo}/code-scanning/analyses',
-              { owner, repo, ref: baseRef, tool_name: 'vulnxscan', per_page: 100 },
-            );
-            const analysis = analyses.find(item => item.category === 'vulnxscan' && !item.error);
-            if (!analysis) throw new Error(`No vulnxscan analysis found for ${baseRef}`);
-
-            const { data } = await github.request(
-              'GET /repos/{owner}/{repo}/code-scanning/analyses/{analysis_id}',
-              {
-                owner,
-                repo,
-                analysis_id: analysis.id,
-                headers: { accept: 'application/sarif+json' },
-              },
-            );
-            const baselineSarif = data instanceof ArrayBuffer
-              ? JSON.parse(Buffer.from(data).toString('utf8'))
-              : typeof data === 'string' ? JSON.parse(data) : data;
-            if (!Array.isArray(baselineSarif.runs)) throw new Error('Invalid baseline SARIF response');
-            const currentSarif = JSON.parse(fs.readFileSync('vulns.sarif', 'utf8'));
-            const findings = sarif => (sarif.runs ?? []).flatMap(run => run.results ?? []);
-            const keyedFindings = sarif => new Map(findings(sarif).map(result => {
-              const fingerprint = result.partialFingerprints?.primaryLocationLineHash;
-              if (!fingerprint) throw new Error(`Missing fingerprint for ${result.ruleId}`);
-              return [fingerprint, result];
-            }));
-            const baseline = keyedFindings(baselineSarif);
-            const current = keyedFindings(currentSarif);
-            const semanticMessage = result => result.message.text.replace(/ Derivations:.*$/, '');
-            const semanticFinding = result => `${result.level ?? ''}\n${semanticMessage(result)}`;
-            const replacementKey = result => {
-              const [, packageName, details] = result.message.text.match(/^\S+ affects (\S+) \S+\.?(.*)$/) ?? [];
-              if (!packageName) throw new Error(`Unexpected finding message: ${result.message.text}`);
-              return `${result.ruleId}\n${packageName}\n${result.level ?? ''}\n${details.replace(/ Derivations:.*$/, '')}`;
-            };
-            const exactAdded = [...current].filter(([key]) => !baseline.has(key)).map(([, result]) => result);
-            const resolved = [...baseline].filter(([key]) => !current.has(key)).map(([, result]) => result);
-            let carried = 0;
-            const added = exactAdded.filter(result => {
-              const replacement = resolved.findIndex(candidate => replacementKey(candidate) === replacementKey(result));
-              if (replacement < 0) return true;
-              resolved.splice(replacement, 1);
-              carried += 1;
-              return false;
-            });
-            const changed = [...current]
-              .filter(([key, result]) => baseline.has(key) && semanticFinding(result) !== semanticFinding(baseline.get(key)))
-              .map(([key, result]) => [baseline.get(key), result]);
-            const formatFinding = result =>
-              `- ${result.message.text.split(/ (?:Detected by|Fixed versions reported by scanners|Scanner fix state|Nix patch evidence|Derivations):/)[0]}`;
-            const formatChanged = ([before, after]) =>
-              `- **${after.ruleId}**: [${before.level}] ${semanticMessage(before)} => [${after.level}] ${semanticMessage(after)}`;
-            const carriedNote = carried ? `; ${carried} persisted across package version updates` : '';
-            const vulnerabilityDiff = added.length || resolved.length || changed.length
-              ? [
-                  `${current.size} current, ${added.length} added, ${resolved.length} resolved, ${changed.length} changed${carriedNote}.`,
-                  ...(added.length ? ['', '### Added', '', ...added.map(formatFinding)] : []),
-                  ...(resolved.length ? ['', '### Resolved', '', ...resolved.map(formatFinding)] : []),
-                  ...(changed.length ? ['', '### Changed', '', ...changed.map(formatChanged)] : []),
-                ].join('\n')
-              : `No finding additions, resolutions, or detail changes (${current.size} current${carriedNote}).`;
-            const body = [
+            const parts = [
               marker,
               '## QNAS Closure Changes',
               '',
               '```',
               process.env.DIX_DIFF ?? '',
               '```',
-              '',
-              '## QNAS Vulnerability Changes',
-              '',
-              vulnerabilityDiff,
-            ].join('\n');
+            ];
+            if (process.env.VULNS_DIFF === 'success') {
+              parts.push(
+                '',
+                '## QNAS Vulnerability Changes',
+                '',
+                fs.readFileSync('vulns-diff.md', 'utf8'),
+              );
+            }
+            const body = parts.join('\n');
 
             const issue_number = context.payload.pull_request.number;
             const comments = await github.paginate(github.rest.issues.listComments, {
