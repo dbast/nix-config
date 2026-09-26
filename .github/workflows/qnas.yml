@@ -54,7 +54,7 @@ jobs:
         env:
           GRYPE_DB_REQUIRE_UPDATE_CHECK: "true"
         run: |
-          nix run github:tiiuae/sbomnix/cb26545fc542efe420f340dbae7e3ab4ad865746#vulnxscan -- \
+          nix run .#vulnxscan -- \
             "$PWD/result-current" --require-cpe-dictionary --format sarif --sarif-location machines/qnas.nix
       - name: Upload SARIF
         if: always()
@@ -88,7 +88,7 @@ jobs:
         id: vulns-diff
         if: github.event_name == 'pull_request' && steps.sarif-baseline.outputs.cache-hit == 'true'
         run: |
-          nix run github:tiiuae/sbomnix/cb26545fc542efe420f340dbae7e3ab4ad865746#vulnxscan-diff -- \
+          nix run .#vulnxscan-diff -- \
             --current vulns.sarif --previous baseline/vulns.sarif --markdown vulns-diff.md
       - name: Build base system for comparison
         if: github.event_name == 'pull_request'

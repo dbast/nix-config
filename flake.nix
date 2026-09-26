@@ -17,6 +17,10 @@
     # renovate: datasource=github-tags depName=nix-community/disko versioning=semver extractVersion=^v(?<version>.*)$
     disko.url = "github:nix-community/disko/v1.13.0";
     disko.inputs.nixpkgs.follows = "nixpkgs";
+    # Keep sbomnix's own nixpkgs independent: it tracks nixos-unstable and
+    # following our stable nixpkgs risks breaking its Python dependencies.
+    sbomnix.url = "github:tiiuae/sbomnix";
+    sbomnix.inputs.flake-parts.follows = "flake-parts";
   };
 
   outputs =
@@ -30,6 +34,7 @@
       nixos-monitoring-lite,
       nixos-hardware,
       sops-nix,
+      sbomnix,
       ...
     }:
     flake-parts.lib.mkFlake { inherit inputs; } {
@@ -53,6 +58,12 @@
         in
         {
           treefmt = import ./treefmt.nix;
+
+          # Re-export sbomnix apps so CI runs the flake.lock-pinned revision
+          # (`nix run .#vulnxscan`), which Renovate keeps updated.
+          apps = {
+            inherit (sbomnix.apps.${system}) vulnxscan vulnxscan-diff;
+          };
 
           packages = {
             inherit (pkgs) dix;
