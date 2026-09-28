@@ -40,7 +40,7 @@ runs:
       shell: bash
       env:
         GRYPE_DB_REQUIRE_UPDATE_CHECK: "true"
-        # renovate: datasource=github-commits depName=tiiuae/sbomnix
+        # renovate: datasource=github-digest depName=tiiuae/sbomnix
         SBOMNIX_VERSION: "cb26545fc542efe420f340dbae7e3ab4ad865746"
         TARGET: ${{ inputs.target }}
         SARIF_LOCATION: ${{ inputs.sarif-location }}
@@ -96,7 +96,7 @@ runs:
       if: github.event_name == 'pull_request' && steps.download.outcome == 'success'
       shell: bash
       env:
-        # renovate: datasource=github-commits depName=tiiuae/sbomnix
+        # renovate: datasource=github-digest depName=tiiuae/sbomnix
         SBOMNIX_VERSION: "cb26545fc542efe420f340dbae7e3ab4ad865746"
         SARIF_FILE: ${{ inputs.sarif-file }}
         BASELINE_PATH: ${{ inputs.baseline-path }}
