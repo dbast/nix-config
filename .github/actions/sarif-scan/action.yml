@@ -1,0 +1,119 @@
+name: SARIF vulnerability scan
+description: >-
+  Run sbomnix vulnxscan against a build result, upload the SARIF to code-scanning and as an artifact, and on pull requests diff it against the SARIF artifact uploaded by the latest successful push run of the calling workflow (the baseline). On push runs the uploaded artifact becomes the baseline for future pull requests.
+inputs:
+  target:
+    description: Build result to scan
+    default: result-current
+  sarif-file:
+    description: SARIF file written by the scan
+    default: vulns.sarif
+  sarif-location:
+    description: Value passed to vulnxscan --sarif-location (e.g. machines/qnas.nix)
+    required: true
+  artifact:
+    description: Artifact name for the scan's SARIF file (also used to fetch the baseline)
+    required: true
+  workflow-id:
+    description: File name of the workflow producing the baseline (e.g. qnas.yml)
+    required: true
+  baseline-branch:
+    description: Branch the baseline run must have run on
+    default: main
+  baseline-path:
+    description: Directory to extract the baseline artifact into
+    default: baseline
+  diff-markdown-file:
+    description: Markdown file written by the baseline diff
+    default: vulns-diff.md
+  category:
+    description: SARIF upload category for code-scanning
+    default: vulnxscan
+outputs:
+  diff-markdown:
+    description: Baseline diff markdown, empty when no baseline was available
+    value: ${{ steps.read-diff.outputs.markdown }}
+runs:
+  using: composite
+  steps:
+    - name: Scan
+      shell: bash
+      env:
+        GRYPE_DB_REQUIRE_UPDATE_CHECK: "true"
+        # renovate: datasource=github-commits depName=tiiuae/sbomnix
+        SBOMNIX_VERSION: "cb26545fc542efe420f340dbae7e3ab4ad865746"
+        TARGET: ${{ inputs.target }}
+        SARIF_LOCATION: ${{ inputs.sarif-location }}
+      run: |
+        nix run "github:tiiuae/sbomnix/$SBOMNIX_VERSION#vulnxscan" -- \
+          "$PWD/$TARGET" --require-cpe-dictionary --format sarif --sarif-location "$SARIF_LOCATION"
+    - name: Upload SARIF to code-scanning
+      if: always()
+      uses: github/codeql-action/upload-sarif@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
+      with:
+        sarif_file: ${{ inputs.sarif-file }}
+        category: ${{ inputs.category }}
+    - name: Upload SARIF artifact
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      with:
+        name: ${{ inputs.artifact }}
+        path: ${{ inputs.sarif-file }}
+        retention-days: ${{ github.event_name == 'pull_request' && 7 || 60 }}
+        if-no-files-found: error
+    - name: Find baseline run
+      id: find
+      if: github.event_name == 'pull_request'
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+        WORKFLOW_ID: ${{ inputs.workflow-id }}
+        BRANCH: ${{ inputs.baseline-branch }}
+      run: |
+        id=""
+        if ! id="$(gh api --method GET "repos/$GITHUB_REPOSITORY/actions/workflows/$WORKFLOW_ID/runs" \
+          -f branch="$BRANCH" -f event=push -f conclusion=success \
+          --jq '.workflow_runs[0].id // empty')"; then
+          id=""
+        fi
+        if [ -n "$id" ]; then
+          echo "Baseline run: $id"
+          echo "id=$id" >> "$GITHUB_OUTPUT"
+        else
+          echo "::warning::No successful $BRANCH push run of $WORKFLOW_ID found (or lookup failed); skipping baseline."
+        fi
+    - name: Download baseline
+      id: download
+      if: github.event_name == 'pull_request' && steps.find.outputs.id != ''
+      continue-on-error: true
+      uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+      with:
+        name: ${{ inputs.artifact }}
+        path: ${{ inputs.baseline-path }}
+        run-id: ${{ steps.find.outputs.id }}
+        github-token: ${{ github.token }}
+    - name: Diff against baseline
+      id: diff
+      if: github.event_name == 'pull_request' && steps.download.outcome == 'success'
+      shell: bash
+      env:
+        # renovate: datasource=github-commits depName=tiiuae/sbomnix
+        SBOMNIX_VERSION: "cb26545fc542efe420f340dbae7e3ab4ad865746"
+        SARIF_FILE: ${{ inputs.sarif-file }}
+        BASELINE_PATH: ${{ inputs.baseline-path }}
+        DIFF_MARKDOWN: ${{ inputs.diff-markdown-file }}
+      run: |
+        nix run "github:tiiuae/sbomnix/$SBOMNIX_VERSION#vulnxscan-diff" -- \
+          --current "$SARIF_FILE" --previous "$BASELINE_PATH/$SARIF_FILE" --markdown "$DIFF_MARKDOWN"
+    - name: Read diff
+      id: read-diff
+      shell: bash
+      env:
+        DIFF_MARKDOWN: ${{ inputs.diff-markdown-file }}
+        DIFF_OUTCOME: ${{ steps.diff.outcome }}
+      run: |
+        echo 'markdown<<EOF' >> "$GITHUB_OUTPUT"
+        if [ "$DIFF_OUTCOME" = success ]; then
+          cat "$DIFF_MARKDOWN"
+          cat "$DIFF_MARKDOWN" >> "$GITHUB_OUTPUT"
+        fi
+        echo 'EOF' >> "$GITHUB_OUTPUT"

@@ -30,6 +30,7 @@ jobs:
       contents: read
       pull-requests: write # Post closure diff comments on pull requests.
       security-events: write # Upload vulnxscan SARIF.
+      actions: read # Download the SARIF baseline artifact from main-branch runs.
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -51,48 +52,12 @@ jobs:
         run: |
           nix build .#nixosConfigurations.qnas.config.system.build.toplevel -o result-current
       - name: Scan qnas system
-        env:
-          GRYPE_DB_REQUIRE_UPDATE_CHECK: "true"
-        run: |
-          nix run github:tiiuae/sbomnix/cb26545fc542efe420f340dbae7e3ab4ad865746#vulnxscan -- \
-            "$PWD/result-current" --require-cpe-dictionary --format sarif --sarif-location machines/qnas.nix
-      - name: Upload SARIF
-        if: always()
-        uses: github/codeql-action/upload-sarif@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
+        id: sarif
+        uses: ./.github/actions/sarif-scan
         with:
-          sarif_file: vulns.sarif
-          category: vulnxscan
-      - name: Restore SARIF baseline
-        id: sarif-baseline
-        if: github.event_name == 'pull_request'
-        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: baseline/vulns.sarif
-          key: vulnxscan-sarif
-          # Prefix match picks the most recently created entry: the latest
-          # main-branch upload, regardless of which commit produced it.
-          restore-keys: |
-            vulnxscan-sarif-
-      - name: Stage SARIF baseline
-        if: github.event_name == 'push'
-        run: |
-          mkdir -p baseline
-          cp vulns.sarif baseline/vulns.sarif
-      - name: Save SARIF baseline
-        if: github.event_name == 'push'
-        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: baseline/vulns.sarif
-          key: vulnxscan-sarif-${{ github.sha }}
-      - name: Generate vulnerability diff
-        id: vulns-diff
-        # cache-hit is only set on an exact key match; the baseline is stored
-        # under vulnxscan-sarif-<sha> and always found via restore-keys prefix
-        # match, so test cache-matched-key (non-empty on any restore) instead.
-        if: github.event_name == 'pull_request' && steps.sarif-baseline.outputs.cache-matched-key != ''
-        run: |
-          nix run github:tiiuae/sbomnix/cb26545fc542efe420f340dbae7e3ab4ad865746#vulnxscan-diff -- \
-            --current vulns.sarif --previous baseline/vulns.sarif --markdown vulns-diff.md
+          sarif-location: machines/qnas.nix
+          artifact: vulnxscan-sarif
+          workflow-id: qnas.yml
       - name: Build base system for comparison
         if: github.event_name == 'pull_request'
         env:
@@ -115,7 +80,7 @@ jobs:
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         env:
           DIX_DIFF: ${{ steps.dix.outputs.diff }}
-          VULNS_DIFF: ${{ steps.vulns-diff.outcome }}
+          VULNS_DIFF: ${{ steps.sarif.outputs.diff-markdown }}
         with:
           script: |
             const fs = require('fs');
@@ -129,13 +94,9 @@ jobs:
               process.env.DIX_DIFF ?? '',
               '```',
             ];
-            if (process.env.VULNS_DIFF === 'success') {
-              parts.push(
-                '',
-                '## QNAS Vulnerability Changes',
-                '',
-                fs.readFileSync('vulns-diff.md', 'utf8'),
-              );
+            if (process.env.VULNS_DIFF) {
+              // The tool's markdown carries its own '# Vulnerability Changes' heading.
+              parts.push('', process.env.VULNS_DIFF);
             }
             const body = parts.join('\n');
 
