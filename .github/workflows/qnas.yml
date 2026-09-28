@@ -86,7 +86,10 @@ jobs:
           key: vulnxscan-sarif-${{ github.sha }}
       - name: Generate vulnerability diff
         id: vulns-diff
-        if: github.event_name == 'pull_request' && steps.sarif-baseline.outputs.cache-hit == 'true'
+        # cache-hit is only set on an exact key match; the baseline is stored
+        # under vulnxscan-sarif-<sha> and always found via restore-keys prefix
+        # match, so test cache-matched-key (non-empty on any restore) instead.
+        if: github.event_name == 'pull_request' && steps.sarif-baseline.outputs.cache-matched-key != ''
         run: |
           nix run github:tiiuae/sbomnix/cb26545fc542efe420f340dbae7e3ab4ad865746#vulnxscan-diff -- \
             --current vulns.sarif --previous baseline/vulns.sarif --markdown vulns-diff.md
