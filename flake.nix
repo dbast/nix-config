@@ -11,8 +11,6 @@
     home-manager.inputs.nixpkgs.follows = "nixpkgs";
     nixos-monitoring-lite.url = "github:dbast/nixos-monitoring-lite";
     nixos-monitoring-lite.inputs.nixpkgs.follows = "nixpkgs";
-    nixos-hardware.url = "github:dbast/nixos-hardware/qnap-ts-x33";
-    nixos-hardware.inputs.nixpkgs.follows = "nixpkgs";
     sops-nix.url = "github:Mic92/sops-nix";
     sops-nix.inputs.nixpkgs.follows = "nixpkgs";
     # renovate: datasource=github-tags depName=nix-community/disko versioning=semver extractVersion=^v(?<version>.*)$
@@ -29,7 +27,6 @@
       home-manager,
       disko,
       nixos-monitoring-lite,
-      nixos-hardware,
       sops-nix,
       ...
     }:
@@ -76,7 +73,7 @@
         specialArgs = { inherit inputs; };
         modules = [
           disko.nixosModules.disko
-          nixos-hardware.nixosModules.qnap-ts-433
+          ./machines/hardware/ts-433
           nixos-monitoring-lite.nixosModules.canary
           sops-nix.nixosModules.sops
           ./machines/qnas.nix
@@ -92,7 +89,7 @@
         specialArgs = { inherit inputs; };
         modules = [
           disko.nixosModules.disko
-          nixos-hardware.nixosModules.qnap-ts-233
+          ./machines/hardware/ts-233
           nixos-monitoring-lite.nixosModules.default
           sops-nix.nixosModules.sops
           ./machines/rnas.nix

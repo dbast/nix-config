@@ -17,7 +17,7 @@
         ./../machines/rnas.nix
         inputs.disko.nixosModules.disko
         inputs.home-manager.nixosModules.home-manager
-        inputs.nixos-hardware.nixosModules.qnap-ts-233
+        ../machines/hardware/ts-233
         inputs.nixos-monitoring-lite.nixosModules.default
         inputs.sops-nix.nixosModules.sops
       ];
