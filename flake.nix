@@ -4,6 +4,7 @@
   inputs = {
     flake-parts.url = "github:hercules-ci/flake-parts";
     nixpkgs.url = "github:nixos/nixpkgs/nixos-26.05";
+    nixpkgs-unstable.url = "github:nixos/nixpkgs/nixos-unstable-small";
     treefmt-nix.url = "github:numtide/treefmt-nix";
     treefmt-nix.inputs.nixpkgs.follows = "nixpkgs";
     home-manager.url = "github:nix-community/home-manager/release-26.05";
@@ -56,6 +57,7 @@
 
           packages = {
             inherit (pkgs) dix;
+            sbomnix = inputs.nixpkgs-unstable.legacyPackages.${system}.sbomnix;
           }
           // (
             if pkgs.stdenv.hostPlatform.isLinux then
