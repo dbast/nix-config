@@ -40,12 +40,10 @@ runs:
       shell: bash
       env:
         GRYPE_DB_REQUIRE_UPDATE_CHECK: "true"
-        # renovate: datasource=github-digest depName=tiiuae/sbomnix
-        SBOMNIX_VERSION: "cb26545fc542efe420f340dbae7e3ab4ad865746"
         TARGET: ${{ inputs.target }}
         SARIF_LOCATION: ${{ inputs.sarif-location }}
       run: |
-        nix run "github:tiiuae/sbomnix/$SBOMNIX_VERSION#vulnxscan" -- \
+        nix shell .#sbomnix --command vulnxscan \
           "$PWD/$TARGET" --require-cpe-dictionary --format sarif --sarif-location "$SARIF_LOCATION"
     - name: Upload SARIF to code-scanning
       if: always()
@@ -96,13 +94,11 @@ runs:
       if: github.event_name == 'pull_request' && steps.download.outcome == 'success'
       shell: bash
       env:
-        # renovate: datasource=github-digest depName=tiiuae/sbomnix
-        SBOMNIX_VERSION: "cb26545fc542efe420f340dbae7e3ab4ad865746"
         SARIF_FILE: ${{ inputs.sarif-file }}
         BASELINE_PATH: ${{ inputs.baseline-path }}
         DIFF_MARKDOWN: ${{ inputs.diff-markdown-file }}
       run: |
-        nix run "github:tiiuae/sbomnix/$SBOMNIX_VERSION#vulnxscan-diff" -- \
+        nix shell .#sbomnix --command vulnxscan-diff \
           --current "$SARIF_FILE" --previous "$BASELINE_PATH/$SARIF_FILE" --markdown "$DIFF_MARKDOWN"
     - name: Read diff
       id: read-diff
