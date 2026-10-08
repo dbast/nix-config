@@ -6,6 +6,7 @@ on:
       - flake.*
       - Makefile
       - machines/base.nix
+      - machines/hardware/**
       - machines/rnas.nix
       - disko/rnas.nix
       - users/**
