@@ -5,3 +5,12 @@ self-hosted-runner:
   labels:
     - ubuntu-26.04
     - ubuntu-26.04-arm
+# actionlint 1.7.12 does not recognize GitHub's $/ self-repository syntax.
+# Remove these ignores when https://github.com/rhysd/actionlint/issues/711 is fixed.
+paths:
+  .github/workflows/check.yml:
+    ignore:
+      - '^specifying action "\$/\.github/actions/timestamp-compare" in invalid format because ref is missing\.'
+  .github/workflows/qnas.yml:
+    ignore:
+      - '^specifying action "\$/\.github/actions/sarif-scan" in invalid format because ref is missing\.'
