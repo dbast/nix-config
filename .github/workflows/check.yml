@@ -37,7 +37,7 @@ jobs:
       - name: Collect flake input timestamps
         id: flake-input-dates
         if: github.event_name == 'pull_request'
-        uses: ./.github/actions/timestamp-compare
+        uses: $/.github/actions/timestamp-compare
         with:
           main-lock: ${{ runner.temp }}/flake-base.lock
       - name: Post flake input changes to PR

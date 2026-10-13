@@ -54,7 +54,7 @@ jobs:
           nix build .#nixosConfigurations.qnas.config.system.build.toplevel -o result-current
       - name: Scan qnas system
         id: sarif
-        uses: ./.github/actions/sarif-scan
+        uses: $/.github/actions/sarif-scan
         with:
           sarif-location: machines/qnas.nix
           artifact: vulnxscan-sarif
