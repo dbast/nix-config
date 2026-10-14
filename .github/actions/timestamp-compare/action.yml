@@ -19,6 +19,7 @@ runs:
       env:
         MAIN_LOCK: ${{ inputs.main-lock }}
         CURRENT_LOCK: ${{ inputs.current-lock }}
+        GH_TOKEN: ${{ github.token }}
       run: |
         node <<'EOF'
         const { appendFileSync, readFileSync } = require('node:fs');
@@ -31,26 +32,54 @@ runs:
         const format = timestamp => timestamp == null
           ? '-'
           : new Date(timestamp * 1000).toISOString().replace('.000Z', 'Z');
+        const comparable = (before, after) =>
+          before?.type === 'github' && after?.type === 'github' &&
+          before.owner === after.owner && before.repo === after.repo &&
+          before.rev !== after.rev;
         const diffLink = (before, after) => {
-          if (before?.type !== 'github' || after?.type !== 'github') return '-';
-          if (before.owner !== after.owner || before.repo !== after.repo) return '-';
-          if (before.rev === after.rev) return '-';
+          if (!comparable(before, after)) return '-';
           const base = `https://github.com/${before.owner}/${before.repo}`;
           return `[diff](${base}/compare/${before.rev}...${after.rev})`;
+        };
+        // GitHub compare API: https://docs.github.com/rest/commits/commits#compare-two-commits
+        const commitCount = async (before, after) => {
+          if (!comparable(before, after)) return '-';
+          try {
+            const res = await fetch(
+              `https://api.github.com/repos/${before.owner}/${before.repo}/compare/${before.rev}...${after.rev}`,
+              {
+                headers: {
+                  Accept: 'application/vnd.github+json',
+                  ...(process.env.GH_TOKEN && { Authorization: `Bearer ${process.env.GH_TOKEN}` }),
+                  'User-Agent': 'timestamp-compare-action',
+                },
+              },
+            );
+            if (!res.ok) return '-';
+            const { ahead_by: ahead, behind_by: behind } = await res.json();
+            if (typeof ahead !== 'number' || typeof behind !== 'number') return '-';
+            if (ahead > 0 && behind > 0) return `+${ahead}/-${behind}`;
+            return behind > 0 ? `-${behind}` : `${ahead}`;
+          } catch {
+            return '-';
+          }
         };
         const main = lockedNodes(process.env.MAIN_LOCK);
         const current = lockedNodes(process.env.CURRENT_LOCK);
         const names = [...new Set([...Object.keys(main), ...Object.keys(current)])].sort();
-        const rows = names.map(name => {
-          const currentDate = format(current[name]?.lastModified);
-          const displayedCurrent = main[name]?.lastModified === current[name]?.lastModified ? currentDate : `**${currentDate}**`;
-          return `| ${name.replaceAll('|', '\\|')} | ${format(main[name]?.lastModified)} | ${displayedCurrent} | ${diffLink(main[name], current[name])} |`;
-        });
-        const table = [
-          '| What | Main | Current | Diff |',
-          '| --- | --- | --- | --- |',
-          ...rows,
-        ].join('\n');
+        (async () => {
+          const counts = await Promise.all(names.map(name => commitCount(main[name], current[name])));
+          const rows = names.map((name, index) => {
+            const currentDate = format(current[name]?.lastModified);
+            const displayedCurrent = main[name]?.lastModified === current[name]?.lastModified ? currentDate : `**${currentDate}**`;
+            return `| ${name.replaceAll('|', '\\|')} | ${format(main[name]?.lastModified)} | ${displayedCurrent} | ${diffLink(main[name], current[name])} | ${counts[index]} |`;
+          });
+          const table = [
+            '| What | Main | Current | Diff | Commits |',
+            '| --- | --- | --- | --- | --- |',
+            ...rows,
+          ].join('\n');
 
-        appendFileSync(process.env.GITHUB_OUTPUT, `dates<<EOF\n${table}\nEOF\n`);
+          appendFileSync(process.env.GITHUB_OUTPUT, `dates<<EOF\n${table}\nEOF\n`);
+        })();
         EOF
