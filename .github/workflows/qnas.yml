@@ -54,6 +54,7 @@ jobs:
           nix build .#nixosConfigurations.qnas.config.system.build.toplevel -o result-current
       - name: Scan qnas system
         id: sarif
+        continue-on-error: true
         uses: $/.github/actions/sarif-scan
         with:
           sarif-location: machines/qnas.nix
@@ -81,7 +82,7 @@ jobs:
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         env:
           DIX_DIFF: ${{ steps.dix.outputs.diff }}
-          VULNS_DIFF: ${{ steps.sarif.outputs.diff-markdown }}
+          VULNS_DIFF: ${{ steps.sarif.outcome == 'failure' && 'sbomnix scanning failed. See the workflow logs for details (non-blocking).' || steps.sarif.outputs.diff-markdown }}
         with:
           script: |
             const fs = require('fs');
