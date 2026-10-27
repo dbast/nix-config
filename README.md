@@ -4,6 +4,13 @@
 [![QNAS](https://img.shields.io/github/actions/workflow/status/dbast/nix-config/qnas.yml?branch=main&label=QNAS)](https://github.com/dbast/nix-config/actions/workflows/qnas.yml)
 [![RNAS](https://img.shields.io/github/actions/workflow/status/dbast/nix-config/rnas.yml?branch=main&label=RNAS)](https://github.com/dbast/nix-config/actions/workflows/rnas.yml)
 
+<!-- nixpkgs-badges:start -->
+
+[![NixOS commits behind stable](https://img.shields.io/github/commits-since/nixos/nixpkgs/1f607aa79b6356ed45d3cd3c8079c196e79efa2c/nixos-26.05?label=NixOS%20commits%20behind%20stable)](https://github.com/nixos/nixpkgs/compare/1f607aa79b6356ed45d3cd3c8079c196e79efa2c...nixos-26.05)
+[![NixOS commits behind unstable](https://img.shields.io/github/commits-since/nixos/nixpkgs/acc2ec71996e90e6e011fa14979b13cdc070ec79/nixos-unstable-small?label=NixOS%20commits%20behind%20unstable)](https://github.com/nixos/nixpkgs/compare/acc2ec71996e90e6e011fa14979b13cdc070ec79...nixos-unstable-small)
+
+<!-- nixpkgs-badges:end -->
+
 # nix-config
 
 This repository contains a minimal NixOS configuration for a QNAP TS-433 NAS, including the extlinux/U-Boot boot setup, RK3568 kernel module defaults, and disk layout used by the `qnas` machine. It assumes the device is booted with a mainline U-Boot image, such as the one built by [qnap-ts-433-bootloader-builder](https://github.com/dbast/qnap-ts-433-bootloader-builder), and is intentionally TS-433-first until related hardware has been tested.

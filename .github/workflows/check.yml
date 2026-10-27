@@ -12,7 +12,7 @@ jobs:
     name: Check
     runs-on: ubuntu-26.04
     permissions:
-      contents: read
+      contents: write # Commit generated README badges to same-repository PR branches.
       pull-requests: write # Post flake input timestamp comments on pull requests.
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -23,11 +23,6 @@ jobs:
         run: |
           lscpu
           df -h
-      - uses: cachix/install-nix-action@75c75c31ebece974e48ebc36b4ad125bd97bd97b # 31.11.3
-      - run: |
-          make check
-      - run: |
-          nix fmt -- --ci
       - name: Read base flake lock
         if: github.event_name == 'pull_request'
         env:
@@ -74,3 +69,62 @@ jobs:
             } else {
               await github.rest.issues.createComment({ owner, repo, issue_number, body });
             }
+      - uses: cachix/install-nix-action@75c75c31ebece974e48ebc36b4ad125bd97bd97b # 31.11.3
+      - run: |
+          make check
+      - run: |
+          nix fmt -- --ci
+      - name: Update README badges
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const { head } = context.payload.pull_request;
+            const read = async path => {
+              const { data } = await github.rest.repos.getContent({ owner, repo, path, ref: head.sha });
+              return Buffer.from(data.content, 'base64').toString('utf8');
+            };
+            const [lockContent, readme] = await Promise.all([read('flake.lock'), read('README.md')]);
+            const lock = JSON.parse(lockContent);
+            const badgeLines = [
+              ['nixpkgs', 'stable'],
+              ['nixpkgs-unstable', 'unstable'],
+            ].map(([input, channel]) => {
+              const { locked, original } = lock.nodes[lock.nodes[lock.root].inputs[input]];
+              if (locked.type !== 'github' || !locked.owner || !locked.repo || !locked.rev || !original.ref) {
+                throw new Error(`Expected a GitHub ${input} input with a locked revision and tracked ref`);
+              }
+              const source = [locked.owner, locked.repo].map(encodeURIComponent).join('/');
+              const revision = encodeURIComponent(locked.rev);
+              const branch = encodeURIComponent(original.ref);
+              const label = `NixOS commits behind ${channel}`;
+              return `[![${label}](https://img.shields.io/github/commits-since/${source}/${revision}/${branch}?label=${encodeURIComponent(label)})](https://github.com/${source}/compare/${revision}...${branch})`;
+            });
+            const badges = [
+              '<!-- nixpkgs-badges:start -->',
+              '',
+              ...badgeLines,
+              '',
+              '<!-- nixpkgs-badges:end -->',
+            ].join('\n');
+            const pattern = /<!-- nixpkgs-badges:start -->[\s\S]*?<!-- nixpkgs-badges:end -->/g;
+            if ((readme.match(pattern) ?? []).length !== 1) {
+              throw new Error('Expected exactly one nixpkgs badge block in README.md');
+            }
+            const updated = readme.replace(pattern, () => badges);
+            if (updated === readme) {
+              core.info('README badges already match flake.lock');
+              return;
+            }
+            // Commit only if the PR branch still points to the revision checked by this run.
+            await github.graphql(`mutation($input: CreateCommitOnBranchInput!) {
+              createCommitOnBranch(input: $input) { commit { oid } }
+            }`, {
+              input: {
+                branch: { repositoryNameWithOwner: `${owner}/${repo}`, branchName: head.ref },
+                expectedHeadOid: head.sha,
+                message: { headline: 'docs: sync README badges with flake.lock' },
+                fileChanges: { additions: [{ path: 'README.md', contents: Buffer.from(updated).toString('base64') }] },
+              },
+            });
