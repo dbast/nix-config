@@ -6,8 +6,8 @@
 
 <!-- nixpkgs-badges:start -->
 
-[![NixOS commits behind stable](https://img.shields.io/github/commits-since/nixos/nixpkgs/08d3a97586f6b6343b3b5e799980773629432610/nixos-26.05?label=NixOS%20commits%20behind%20stable)](https://github.com/nixos/nixpkgs/compare/08d3a97586f6b6343b3b5e799980773629432610...nixos-26.05)
-[![NixOS commits behind unstable](https://img.shields.io/github/commits-since/nixos/nixpkgs/715d20f576d746adbf5a871ed37e6e3ee4b280e2/nixos-unstable-small?label=NixOS%20commits%20behind%20unstable)](https://github.com/nixos/nixpkgs/compare/715d20f576d746adbf5a871ed37e6e3ee4b280e2...nixos-unstable-small)
+[![NixOS commits behind stable](https://img.shields.io/github/commits-since/nixos/nixpkgs/6f06d204d8f2d8761d9da78778745974a3216381/nixos-26.05?label=NixOS%20commits%20behind%20stable)](https://github.com/nixos/nixpkgs/compare/6f06d204d8f2d8761d9da78778745974a3216381...nixos-26.05)
+[![NixOS commits behind unstable](https://img.shields.io/github/commits-since/nixos/nixpkgs/5772e19988afd8bb223da0e260075f69205ea0d6/nixos-unstable-small?label=NixOS%20commits%20behind%20unstable)](https://github.com/nixos/nixpkgs/compare/5772e19988afd8bb223da0e260075f69205ea0d6...nixos-unstable-small)
 
 <!-- nixpkgs-badges:end -->
 
