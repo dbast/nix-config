@@ -61,9 +61,10 @@ jobs:
         id: dix
         if: github.event_name == 'pull_request'
         run: |
+          diff=$(nix run .#dix -- --color never diff result-base result-current)
           {
             echo "diff<<EOF"
-            nix run .#dix result-base result-current
+            echo "$diff"
             echo "EOF"
           } | tee -a "$GITHUB_OUTPUT"
       - name: Post RNAS changes to PR
@@ -80,7 +81,7 @@ jobs:
               marker,
               '## RNAS Closure Changes',
               '',
-              '```',
+              '```text',
               process.env.DIX_DIFF ?? '',
               '```',
             ].join('\n');

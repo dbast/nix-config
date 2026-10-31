@@ -53,7 +53,7 @@
           treefmt = import ./treefmt.nix;
 
           packages = {
-            inherit (pkgs) dix;
+            dix = inputs.nixpkgs-unstable.legacyPackages.${system}.dix;
             sbomnix = inputs.nixpkgs-unstable.legacyPackages.${system}.sbomnix;
           }
           // (
