@@ -72,7 +72,7 @@ jobs:
         id: dix
         if: github.event_name == 'pull_request'
         run: |
-          diff=$(nix run .#dix -- --color never diff result-base result-current)
+          diff=$(nix run .#dix -- --color never diff --full result-base result-current)
           {
             echo "diff<<EOF"
             echo "$diff"
