@@ -5,6 +5,10 @@ SHELL := /usr/bin/env bash -o pipefail -o errexit
 .DEFAULT_GOAL := help
 export SOPS_AGE_KEY_FILE ?= $(HOME)/.config/sops/age/keys.txt
 
+ifeq ($(TERM),xterm-ghostty)
+export TERM_FEATURES := P
+endif
+
 help: ## Show available targets
 	@while IFS= read -r line; do \
 		case "$$line" in \
